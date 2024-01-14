@@ -1,4 +1,13 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
+import { List } from './list.entity';
 
 @Entity({ schema: 'qubitss_core' })
 export class Persona {
@@ -25,4 +34,40 @@ export class Persona {
 
   @Column()
   direc_per: string;
+
+  @Column()
+  sex_per: string;
+
+  @Column()
+  fech_nac_per: Date;
+
+  @Column()
+  id_pais_nac: number;
+
+  @Column()
+  aud_fech_crea: Date;
+
+  @Column()
+  est_civil_per: string;
+
+  @Column()
+  id_ubigeo_nac: number;
+
+  @Column()
+  nro_ruc: string;
+
+  @Column()
+  id_pais_emisor_doc: number;
+
+  @OneToOne(() => List, (list) => list.persona_tipo_doc_per, {})
+  @JoinColumn({ name: 'tipo_doc_per', referencedColumnName: 'id_lista' })
+  nomb_tipo_doc_per: List;
+
+  @OneToOne(() => List, (list) => list.persona_id_pais_nac, {})
+  @JoinColumn({ name: 'id_pais_nac', referencedColumnName: 'id_lista' })
+  nomb_id_pais_nac: List;
+
+  @OneToOne(() => List, (list) => list.persona_id_pais_emisor_doc, {})
+  @JoinColumn({ name: 'id_pais_emisor_doc', referencedColumnName: 'id_lista' })
+  nomb_id_pais_emisor_doc: List;
 }
