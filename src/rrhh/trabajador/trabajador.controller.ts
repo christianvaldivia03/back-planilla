@@ -1,34 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Patch } from '@nestjs/common';
 import { TrabajadorService } from './trabajador.service';
 import { CreateTrabajadorDto } from './dto/create-trabajador.dto';
 import { UpdateTrabajadorDto } from './dto/update-trabajador.dto';
+import { SearchTrabajadorDto } from './dto';
 
-@Controller('trabajador')
+@Controller('rrhh/trabajador')
 export class TrabajadorController {
   constructor(private readonly trabajadorService: TrabajadorService) {}
 
-  @Post()
-  create(@Body() createTrabajadorDto: CreateTrabajadorDto) {
-    return this.trabajadorService.create(createTrabajadorDto);
+  @Post('create')
+  createEmployee(@Body() createTrabajadorDto: CreateTrabajadorDto) {
+    return this.trabajadorService.createEmployee(createTrabajadorDto);
   }
 
-  @Get()
-  findAll() {
-    return this.trabajadorService.findAll();
+  @Patch('update')
+  findEmployee(@Body() updateTrabajadorDto: UpdateTrabajadorDto) {
+    return this.trabajadorService.updateEmployee(updateTrabajadorDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.trabajadorService.findOne(+id);
+  @Patch('delete')
+  deleteEmployee(@Body() updateTrabajadorDto: UpdateTrabajadorDto) {
+    return this.trabajadorService.deleteEmployee(updateTrabajadorDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTrabajadorDto: UpdateTrabajadorDto) {
-    return this.trabajadorService.update(+id, updateTrabajadorDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.trabajadorService.remove(+id);
+  @Post('search')
+  findEmployeeData(@Body() searchTrabajadorDto: SearchTrabajadorDto) {
+    return this.trabajadorService.findEmployeeData(searchTrabajadorDto);
   }
 }

@@ -8,6 +8,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { List } from './list.entity';
+import { Trabajador } from 'src/rrhh/trabajador/entities/trabajador.entity';
 
 @Entity({ schema: 'qubitss_core' })
 export class Persona {
@@ -70,4 +71,8 @@ export class Persona {
   @OneToOne(() => List, (list) => list.persona_id_pais_emisor_doc, {})
   @JoinColumn({ name: 'id_pais_emisor_doc', referencedColumnName: 'id_lista' })
   nomb_id_pais_emisor_doc: List;
+
+  @OneToMany(() => Trabajador, (tra) => tra.persona, {})
+  @JoinColumn({ name: 'id_persona', referencedColumnName: 'id_persona' })
+  trabajador: Trabajador;
 }
