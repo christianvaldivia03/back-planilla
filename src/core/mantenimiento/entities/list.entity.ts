@@ -1,5 +1,5 @@
+import { Persona } from 'src/core/persona/entities/persona.entity';
 import { Column, Entity, OneToOne, PrimaryColumn } from 'typeorm';
-import { Persona } from './persona.entity';
 
 @Entity({ schema: 'qubitss_core', name: 'list' })
 export class List {

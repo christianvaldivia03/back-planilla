@@ -3,8 +3,8 @@ import { PersonaService } from './persona.service';
 import { PersonaController } from './persona.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Persona } from './entities/persona.entity';
-import { List } from './entities/list.entity';
 import { Trabajador } from 'src/rrhh/trabajador/entities/trabajador.entity';
+import { List } from '../mantenimiento/entities/list.entity';
 
 @Module({
   controllers: [PersonaController],

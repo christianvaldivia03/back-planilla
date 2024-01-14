@@ -7,8 +7,8 @@ import {
   OneToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { List } from './list.entity';
 import { Trabajador } from 'src/rrhh/trabajador/entities/trabajador.entity';
+import { List } from 'src/core/mantenimiento/entities/list.entity';
 
 @Entity({ schema: 'qubitss_core' })
 export class Persona {

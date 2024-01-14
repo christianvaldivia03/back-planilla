@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PersonaModule } from './core/persona/persona.module';
 import { PlanillaModule } from './rrhh/planilla/planilla.module';
 import { TrabajadorModule } from './rrhh/trabajador/trabajador.module';
+import { MantenimientoModule } from './core/mantenimiento/mantenimiento.module';
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -25,6 +26,8 @@ import { TrabajadorModule } from './rrhh/trabajador/trabajador.module';
     PersonaModule,
 
     TrabajadorModule,
+
+    MantenimientoModule,
   ],
   controllers: [],
   providers: [],
