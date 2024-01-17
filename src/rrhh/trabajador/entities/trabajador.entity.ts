@@ -1,7 +1,14 @@
 import { Persona } from 'src/core/persona/entities/persona.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
 
-@Entity({ schema: 'qubitss_rrhh' })
+@Entity({ schema: 'qubytss_rrhh' })
 export class Trabajador {
   @PrimaryColumn()
   id_persona: number;

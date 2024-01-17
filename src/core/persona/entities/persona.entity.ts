@@ -10,7 +10,7 @@ import {
 import { Trabajador } from 'src/rrhh/trabajador/entities/trabajador.entity';
 import { List } from 'src/core/mantenimiento/entities/list.entity';
 
-@Entity({ schema: 'qubitss_core' })
+@Entity({ schema: 'qubytss_core' })
 export class Persona {
   @PrimaryColumn()
   id_persona: number;

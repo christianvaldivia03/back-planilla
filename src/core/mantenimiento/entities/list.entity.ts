@@ -1,7 +1,7 @@
 import { Persona } from 'src/core/persona/entities/persona.entity';
 import { Column, Entity, OneToOne, PrimaryColumn } from 'typeorm';
 
-@Entity({ schema: 'qubitss_core', name: 'list' })
+@Entity({ schema: 'qubytss_core', name: 'list' })
 export class List {
   @PrimaryColumn()
   id_lista: number;

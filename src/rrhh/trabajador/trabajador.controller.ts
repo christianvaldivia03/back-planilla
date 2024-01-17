@@ -25,6 +25,6 @@ export class TrabajadorController {
 
   @Post('search')
   findEmployeeData(@Body() searchTrabajadorDto: SearchTrabajadorDto) {
-    return this.trabajadorService.findEmployeeData(searchTrabajadorDto);
+        return this.trabajadorService.findEmployeeData(searchTrabajadorDto);
   }
 }
