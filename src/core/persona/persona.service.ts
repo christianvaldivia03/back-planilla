@@ -76,9 +76,15 @@ export class PersonaService {
       .getMany();
 
     for (const data of persona) {
-      data.nomb_tipo_doc_per = data.nomb_tipo_doc_per.desc_lista;
-      data.nomb_id_pais_nac = data.nomb_id_pais_nac.desc_lista;
-      data.nomb_id_pais_emisor_doc = data.nomb_id_pais_emisor_doc.desc_lista;
+      data.nomb_tipo_doc_per = data.nomb_tipo_doc_per
+        ? data.nomb_tipo_doc_per.desc_lista
+        : null;
+      data.nomb_id_pais_nac = data.nomb_id_pais_nac
+        ? data.nomb_id_pais_nac.desc_lista
+        : null;
+      data.nomb_id_pais_emisor_doc = data.nomb_id_pais_emisor_doc
+        ? data.nomb_id_pais_emisor_doc.desc_lista
+        : null;
     }
     return persona;
   }
@@ -89,7 +95,7 @@ export class PersonaService {
 
     throw new InternalServerErrorException();
   };
-  
+
   private validador = (word: any) => {
     return word !== undefined && word !== null && word !== '';
   };

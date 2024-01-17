@@ -28,7 +28,7 @@ export class TrabajadorService {
 
   async createEmployee(createTrabajadorDto: CreateTrabajadorDto) {
     const { id_persona } = createTrabajadorDto;
-    await this.personaService.findPersonOne(id_persona);
+    // await this.personaService.findPersonOne(id_persona);
     const employee = await this.trabajadorRepository.findOneBy({
       id_persona: id_persona,
     });

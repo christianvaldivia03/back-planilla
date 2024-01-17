@@ -1,26 +1,37 @@
 import { Injectable } from '@nestjs/common';
-import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
-import { UpdateMantenimientoDto } from './dto/update-mantenimiento.dto';
+import { List } from './entities/list.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class MantenimientoService {
-  create(createMantenimientoDto: CreateMantenimientoDto) {
-    return 'This action adds a new mantenimiento';
-  }
+  constructor(
+    @InjectRepository(List)
+    private readonly listRepository: Repository<List>,
+  ) {}
 
-  findAll() {
-    return `This action returns all mantenimiento`;
-  }
+  async searchList(searchListDto: any) {
+    const path = searchListDto.entidad;
+    // const path = 'DOC-IDENTIDAD,PAIS';
+    const datos = path.split(',');
+    let arregloObjetos = {};
 
-  findOne(id: number) {
-    return `This action returns a #${id} mantenimiento`;
-  }
+    for (const data of datos) {
+      const lista = await this.listRepository.findBy({ entidad: data });
+      // const obj = {
+      //   ,
+      // };
+      arregloObjetos = { ...arregloObjetos, [data]: lista };
+      // arregloObjetos.push(obj);
+    }
 
-  update(id: number, updateMantenimientoDto: UpdateMantenimientoDto) {
-    return `This action updates a #${id} mantenimiento`;
-  }
+    // const lista = await this.listRepository.findBy({ entidad: datos });
 
-  remove(id: number) {
-    return `This action removes a #${id} mantenimiento`;
+    // const arregloObjetos = {
+    //   [datos]: lista,
+    // };
+    // console.log(arregloObjetos);
+
+    return arregloObjetos;
   }
 }

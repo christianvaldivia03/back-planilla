@@ -3,15 +3,16 @@ import { PlanillaService } from './planilla.service';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
 
-@Controller('planilla')
+@Controller('rrhh/planilla')
 export class PlanillaController {
   constructor(private readonly planillaService: PlanillaService) {}
 
-  @Post()
+  @Post('create')
   create(@Body() createPlanillaDto: CreatePlanillaDto) {
     return this.planillaService.create(createPlanillaDto);
   }
 
+  
   @Get()
   findAll() {
     return this.planillaService.findAll();

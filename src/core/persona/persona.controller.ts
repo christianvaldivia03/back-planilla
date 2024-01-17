@@ -12,12 +12,12 @@ export class PersonaController {
     return this.personaService.createPersona(createPersonaDto);
   }
 
-  @Post('search-person-data')
+  @Post('search')
   buscarPersonaData(@Body() searchPersonaDto: SearchPersonaDto) {
     return this.personaService.buscarPersonaData(searchPersonaDto);
   }
 
-  @Patch('update-person') //listo
+  @Patch('update') //listo
   updatePerson(@Body() updatePersonaDto: UpdatePersonaDto) {
     return this.personaService.updatePerson(updatePersonaDto);
   }
