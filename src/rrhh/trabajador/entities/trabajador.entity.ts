@@ -1,3 +1,4 @@
+import { List } from 'src/core/mantenimiento/entities/list.entity';
 import { Persona } from 'src/core/persona/entities/persona.entity';
 import {
   Column,
@@ -142,4 +143,29 @@ export class Trabajador {
   @ManyToOne(() => Persona, (per) => per.trabajador, {})
   @JoinColumn({ name: 'id_persona', referencedColumnName: 'id_persona' })
   persona: Persona;
+
+  @OneToOne(() => List, (list) => list.persona_id_pais_emisor_doc, {})
+  @JoinColumn({ name: 'id_regimen_pension', referencedColumnName: 'id_lista' })
+  list_id_regimen_pension: List;
+
+  @OneToOne(() => List)
+  @JoinColumn({
+    name: 'id_regimen_pension_estado',
+    referencedColumnName: 'id_lista',
+  })
+  list_id_regimen_pension_estado: List;
+
+  @OneToOne(() => List)
+  @JoinColumn({
+    name: 'id_regimen_salud',
+    referencedColumnName: 'id_lista',
+  })
+  list_id_regimen_salud: List;
+
+  @OneToOne(() => List)
+  @JoinColumn({
+    name: 'id_tipo_cuent_banco',
+    referencedColumnName: 'id_lista',
+  })
+  list_id_tipo_cuent_banco: List;
 }

@@ -62,15 +62,15 @@ export class Persona {
 
   @OneToOne(() => List, (list) => list.persona_tipo_doc_per, {})
   @JoinColumn({ name: 'tipo_doc_per', referencedColumnName: 'id_lista' })
-  nomb_tipo_doc_per: List;
+  list_tipo_doc_per: List;
 
   @OneToOne(() => List, (list) => list.persona_id_pais_nac, {})
   @JoinColumn({ name: 'id_pais_nac', referencedColumnName: 'id_lista' })
-  nomb_id_pais_nac: List;
+  list_id_pais_nac: List;
 
   @OneToOne(() => List, (list) => list.persona_id_pais_emisor_doc, {})
   @JoinColumn({ name: 'id_pais_emisor_doc', referencedColumnName: 'id_lista' })
-  nomb_id_pais_emisor_doc: List;
+  list_id_pais_emisor_doc: List;
 
   @OneToMany(() => Trabajador, (tra) => tra.persona, {})
   @JoinColumn({ name: 'id_persona', referencedColumnName: 'id_persona' })
