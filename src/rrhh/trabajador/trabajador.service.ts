@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { Trabajador } from './entities/trabajador.entity';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Persona } from 'src/core/persona/entities/persona.entity';
 import { PersonaService } from 'src/core/persona/persona.service';
@@ -29,6 +29,7 @@ export class TrabajadorService {
   async createEmployee(createTrabajadorDto: CreateTrabajadorDto) {
     const { id_persona } = createTrabajadorDto;
     // await this.personaService.findPersonOne(id_persona);
+    console.log(id_persona)
     const employee = await this.trabajadorRepository.findOneBy({
       id_persona: id_persona,
     });
@@ -79,43 +80,63 @@ export class TrabajadorService {
     }
   }
 
+  async buscarOneEmployeeData(searchTrabajadorDto: SearchTrabajadorDto) {
+    const ob = searchTrabajadorDto;
+    const employee = await this.trabajadorRepository.findOneBy({
+      id_persona: ob.id_persona,
+      id_corr_trab: ob.id_corr_trab,
+    });
+    if (!employee)
+      throw new BadRequestException('No se encontro al trabajador');
+
+    Object.keys(employee).forEach((key) => {
+      if (employee[key] === null) employee[key] = '';
+    });
+    const { ...employ } = employee;
+
+    return employ;
+  }
+
   async findEmployeeData(searchTrabajador: SearchTrabajadorDto) {
     const ob = searchTrabajador;
     let employee = [];
-    let query: string = 'true';
-    query += this.validador(ob.nro_doc_per)
-      ? ' AND p.nro_doc_per ~* :nro_doc_per'
-      : '';
-    query += this.validador(ob.ape_pat_per)
-      ? ' AND p.ape_pat_per ~* :ape_pat_per'
-      : '';
-    query += this.validador(ob.ape_mat_per)
-      ? ' AND p.ape_mat_per ~* :ape_mat_per'
-      : '';
-    query += this.validador(ob.nomb_per) ? ' AND p.nomb_per ~* :nomb_per' : '';
-    query += this.validador(ob.cod_trab) ? ' AND tr.cod_trab ~* :cod_trab' : '';
-
-    employee = await this.trabajadorRepository
-      .createQueryBuilder('tr')
-      .innerJoinAndSelect('tr.persona', 'p')
-      .leftJoinAndSelect('p.nomb_tipo_doc_per', 'li')
-      .leftJoinAndSelect('p.nomb_id_pais_nac', 'li2')
-      .leftJoinAndSelect('p.nomb_id_pais_emisor_doc', 'li3')
-      .where(query, ob)
-      .getMany();
-
-    for (const data of employee) {
-      data.persona.nomb_tipo_doc_per = data.persona.nomb_tipo_doc_per
-        ? data.persona.nomb_tipo_doc_per.desc_lista
-        : null;
-      data.persona.nomb_id_pais_nac = data.persona.nomb_id_pais_nac
-        ? data.persona.nomb_id_pais_nac.desc_lista
-        : null;
-      data.persona.nomb_id_pais_emisor_doc = data.persona
-        .nomb_id_pais_emisor_doc
-        ? data.persona.nomb_id_pais_emisor_doc.desc_lista
-        : null;
-    }
+    employee = await this.trabajadorRepository.find({
+      relations: {
+        list_id_regimen_pension: true,
+        list_id_regimen_pension_estado: true,
+        list_id_regimen_salud: true,
+        list_id_tipo_cuent_banco: true,
+        persona: {
+          list_tipo_doc_per: true,
+          list_id_pais_nac: true,
+          list_id_pais_emisor_doc: true,
+        },
+      },
+      where: {
+        persona: {
+          nro_doc_per: ILike(
+            `%${this.validador(ob.nro_doc_per) ? ob.nro_doc_per : ''}%`,
+          ),
+          ape_pat_per: ILike(
+            `%${this.validador(ob.ape_pat_per) ? ob.ape_pat_per : ''}%`,
+          ),
+          ape_mat_per: ILike(
+            `%${this.validador(ob.ape_mat_per) ? ob.ape_mat_per : ''}%`,
+          ),
+          nomb_per: ILike(
+            `%${this.validador(ob.nomb_per) ? ob.nomb_per : ''}%`,
+          ),
+        },
+        cod_trab: ILike(`%${this.validador(ob.cod_trab) ? ob.cod_trab : ''}%`),
+      },
+      order: {
+        persona: {
+          ape_pat_per: 'ASC',
+          ape_mat_per: 'ASC',
+          nomb_per: 'ASC',
+        },
+      },
+    });
 
     return employee;
   }

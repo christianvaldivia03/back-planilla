@@ -17,6 +17,11 @@ export class PersonaController {
     return this.personaService.buscarPersonaData(searchPersonaDto);
   }
 
+  @Post('one-search')
+  buscarOnePersonaData(@Body() searchPersonaDto: SearchPersonaDto) {
+    return this.personaService.buscarOnePersonaData(searchPersonaDto);
+  }
+
   @Patch('update') //listo
   updatePerson(@Body() updatePersonaDto: UpdatePersonaDto) {
     return this.personaService.updatePerson(updatePersonaDto);

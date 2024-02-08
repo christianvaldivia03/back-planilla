@@ -25,6 +25,11 @@ export class TrabajadorController {
 
   @Post('search')
   findEmployeeData(@Body() searchTrabajadorDto: SearchTrabajadorDto) {
-        return this.trabajadorService.findEmployeeData(searchTrabajadorDto);
+    return this.trabajadorService.findEmployeeData(searchTrabajadorDto);
+  }
+
+  @Post('one-search')
+  buscarOnePersonaData(@Body() searchTrabajadorDto: SearchTrabajadorDto) {
+    return this.trabajadorService.buscarOneEmployeeData(searchTrabajadorDto);
   }
 }

@@ -5,17 +5,21 @@ import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 export class SearchTrabajadorDto extends PartialType(CreateTrabajadorDto) {
   @IsString()
   @IsOptional()
-  nro_doc_per: number;
+  nro_doc_per: string;
 
   @IsString()
   @IsOptional()
-  ape_pat_per: number;
+  ape_pat_per: string;
 
   @IsString()
   @IsOptional()
-  ape_mat_per: number;
+  ape_mat_per: string;
 
   @IsString()
   @IsOptional()
-  nomb_per: number;
+  nomb_per: string;
+
+  @IsInt()
+  @IsOptional()
+  id_corr_trab: number;
 }

@@ -20,6 +20,15 @@ export class PersonaService {
   async createPersona(createPersonaDto: CreatePersonaDto) {
     try {
       const persona = await this.personaRepository.create(createPersonaDto);
+      const existingPersona = await this.personaRepository.findOneBy({
+        nro_doc_per: persona.nro_doc_per,
+        tipo_doc_per: persona.tipo_doc_per,
+      });
+      if (existingPersona)
+        throw new BadRequestException(
+          `La persona con numero de documento ${persona.nro_doc_per} ya existe`,
+        );
+
       return await this.personaRepository.save(persona);
     } catch (error) {
       this.handleRxcepction(error);
@@ -69,31 +78,53 @@ export class PersonaService {
 
     persona = await this.personaRepository
       .createQueryBuilder('persona')
-      .leftJoinAndSelect('persona.nomb_tipo_doc_per', 'li')
-      .leftJoinAndSelect('persona.nomb_id_pais_nac', 'li2')
-      .leftJoinAndSelect('persona.nomb_id_pais_emisor_doc', 'li3')
+      .leftJoinAndSelect('persona.list_tipo_doc_per', 'li')
+      .leftJoinAndSelect('persona.list_id_pais_nac', 'li2')
+      .leftJoinAndSelect('persona.list_id_pais_emisor_doc', 'li3')
       .where(query, ob)
       .getMany();
 
-    for (const data of persona) {
-      data.nomb_tipo_doc_per = data.nomb_tipo_doc_per
-        ? data.nomb_tipo_doc_per.desc_lista
-        : null;
-      data.nomb_id_pais_nac = data.nomb_id_pais_nac
-        ? data.nomb_id_pais_nac.desc_lista
-        : null;
-      data.nomb_id_pais_emisor_doc = data.nomb_id_pais_emisor_doc
-        ? data.nomb_id_pais_emisor_doc.desc_lista
-        : null;
-    }
     return persona;
+  }
+
+  // async buscarOnePersonaData(searchPersonaDto: SearchPersonaDto) {
+  //   const ob = searchPersonaDto;
+  //   // const persona = await this.personaRepository.findOneBy({
+  //   //   id_persona: ob.id_persona,
+  //   // });
+  //   // let persona = {};
+  //   const persona = await this.personaRepository
+  //     .createQueryBuilder('persona')
+  //     .leftJoinAndSelect('persona.list_tipo_doc_per', 'li')
+  //     .leftJoinAndSelect('persona.list_id_pais_nac', 'li2')
+  //     .leftJoinAndSelect('persona.list_id_pais_emisor_doc', 'li3')
+  //     .where('persona.id_persona = :id_persona', ob)
+  //     .getOne();
+  //   if (!persona) throw new BadRequestException('No se encontro la persona');
+  //   return persona;
+  // }
+
+  async buscarOnePersonaData(searchPersonaDto: SearchPersonaDto) {
+    const ob = searchPersonaDto;
+    const persona = await this.personaRepository.findOneBy({
+      id_persona: ob.id_persona,
+    });
+    if (!persona) throw new BadRequestException('No se encontro la persona');
+
+    Object.keys(persona).forEach((key) => {
+      if (persona[key] === null) persona[key] = '';
+    });
+    const { id_pais_emisor_doc, fech_nac_per, id_ubigeo_nac, ...person } =
+      persona;
+
+    return person;
   }
 
   private handleRxcepction = (error: any) => {
     if (error.code === '23505') throw new BadRequestException(error.detail);
     this.logger.error(error);
 
-    throw new InternalServerErrorException();
+    throw new InternalServerErrorException(error.detail);
   };
 
   private validador = (word: any) => {

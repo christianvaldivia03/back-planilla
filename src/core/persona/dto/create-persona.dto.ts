@@ -25,7 +25,7 @@ export class CreatePersonaDto {
   @IsString()
   @IsOptional()
   direc_per: string;
-
+  
   @MaxLength(1)
   @IsOptional()
   sex_per: string;
@@ -44,9 +44,9 @@ export class CreatePersonaDto {
   @IsOptional()
   est_civil_per: string;
 
-  @IsInt()
   @IsOptional()
-  id_ubigeo_nac: number;
+  @IsInt()
+  id_ubigeo_nac?: number;
 
   @IsString()
   @IsOptional()
@@ -55,5 +55,4 @@ export class CreatePersonaDto {
   @IsInt()
   @IsOptional()
   id_pais_emisor_doc: number;
-
 }
