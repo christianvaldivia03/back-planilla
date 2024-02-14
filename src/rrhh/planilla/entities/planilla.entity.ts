@@ -1,8 +1,8 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'planilla' })
 export class Planilla {
-  @PrimaryGeneratedColumn({ name: 'id_planilla' })
+  @PrimaryColumn({ name: 'id_planilla' })
   id_planilla: number;
 
   @Column({ name: 'id_planilla_plantilla', nullable: false })
@@ -56,8 +56,8 @@ export class Planilla {
   @Column({ name: 'sys_fech_registro', default: () => 'CURRENT_TIMESTAMP' })
   sys_fech_registro: Date;
 
-  @Column({ name: 'fech_proceso', nullable: true })
-  fech_proceso: Date;
+  // @Column({ name: 'fech_proceso', nullable: true })
+  // fech_proceso: Date;
 
   @Column({ name: 'fech_transf', nullable: true })
   fech_transf: Date;
