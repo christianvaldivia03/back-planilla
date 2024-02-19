@@ -1,4 +1,17 @@
-import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { PlanillaTrabajador } from './planillaTrabajador.entity';
+import { Mes } from 'src/core/mantenimiento/entities/mes.entity';
+import { PlanillaTipo } from './planillatipo.entity';
+import { EmployeeType } from 'src/rrhh/trabajador/entities/trabajadortipo.entity';
 
 @Entity({ name: 'planilla' })
 export class Planilla {
@@ -61,4 +74,29 @@ export class Planilla {
 
   @Column({ name: 'fech_transf', nullable: true })
   fech_transf: Date;
+
+  @OneToMany(
+    () => PlanillaTrabajador,
+    (planillatrabajador) => planillatrabajador.planilla,
+  )
+  @JoinColumn([{ name: 'id_planilla', referencedColumnName: 'id_planilla' }])
+  planillatrabajador: PlanillaTrabajador;
+
+  @OneToOne(() => Mes)
+  @JoinColumn({ name: 'id_mes', referencedColumnName: 'id_mes' })
+  mes: Mes;
+
+  @OneToOne(() => PlanillaTipo)
+  @JoinColumn({
+    name: 'id_tipo_planilla',
+    referencedColumnName: 'id_tipo_planilla',
+  })
+  planillatipo: PlanillaTipo;
+
+  @OneToOne(() => EmployeeType)
+  @JoinColumn({
+    name: 'id_tipo_trabajador',
+    referencedColumnName: 'id_tipo_trabajador',
+  })
+  trabajadortipo: EmployeeType;
 }
