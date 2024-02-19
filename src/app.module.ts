@@ -6,6 +6,7 @@ import { PersonaModule } from './core/persona/persona.module';
 import { PlanillaModule } from './rrhh/planilla/planilla.module';
 import { TrabajadorModule } from './rrhh/trabajador/trabajador.module';
 import { MantenimientoModule } from './core/mantenimiento/mantenimiento.module';
+import { ConceptoModule } from './rrhh/concepto/concepto.module';
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -28,6 +29,8 @@ import { MantenimientoModule } from './core/mantenimiento/mantenimiento.module';
     TrabajadorModule,
 
     MantenimientoModule,
+
+    ConceptoModule,
   ],
   controllers: [],
   providers: [],
