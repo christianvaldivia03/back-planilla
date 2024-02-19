@@ -15,6 +15,7 @@ import {
   UpdateTrabajadorDto,
   SearchTrabajadorDto,
 } from './dto';
+import { TrabajadorConcepto } from './entities/trabajadorConcepto.entity';
 
 @Injectable()
 export class TrabajadorService {
@@ -24,12 +25,43 @@ export class TrabajadorService {
     private readonly trabajadorRepository: Repository<Trabajador>,
     @InjectRepository(Persona)
     private readonly personaService: PersonaService,
+    @InjectRepository(TrabajadorConcepto)
+    private readonly trabajadorConceptoService: Repository<TrabajadorConcepto>,
   ) {}
+
+  async updateEmployeeConcepto(
+    data: TrabajadorConcepto[],
+    idpersona,
+    idcorrtrab,
+  ) {
+    let retorno = [];
+    console.log(data);
+    for (let i = 0; i < data.length; i++) {
+      let dataTrabajadorConcepto =
+        await this.trabajadorConceptoService.findOneBy({
+          id_persona: idpersona,
+          id_corr_trab: idcorrtrab,
+          id_concepto: data[i].id_concepto,
+        });
+      if (!dataTrabajadorConcepto) {
+        await this.trabajadorConceptoService.save({
+          ...data[i],
+          id_persona: idpersona,
+          id_corr_trab: idcorrtrab,
+        });
+      } else {
+        dataTrabajadorConcepto = Object.assign(dataTrabajadorConcepto, {
+          monto_conc: data[i].monto_conc,
+        });
+        await this.trabajadorConceptoService.save(dataTrabajadorConcepto);
+      }
+      retorno.push(dataTrabajadorConcepto);
+    }
+    return retorno;
+  }
 
   async createEmployee(createTrabajadorDto: CreateTrabajadorDto) {
     const { id_persona } = createTrabajadorDto;
-    // await this.personaService.findPersonOne(id_persona);
-    console.log(id_persona)
     const employee = await this.trabajadorRepository.findOneBy({
       id_persona: id_persona,
     });
@@ -50,8 +82,16 @@ export class TrabajadorService {
           ...createTrabajadorDto,
           id_corr_trab: d.id_corr_trab,
         };
+
         const newEmployee = await this.trabajadorRepository.create(data);
-        return await this.trabajadorRepository.save(newEmployee);
+
+        const employeeFinal = await this.trabajadorRepository.save(newEmployee);
+        employeeFinal.trabajadorConcepto = await this.updateEmployeeConcepto(
+          createTrabajadorDto.trabajador_concepto,
+          id_persona,
+          d.id_corr_trab,
+        );
+        return employeeFinal;
       }
     } catch (error) {
       this.handleRxcepction(error);
@@ -106,6 +146,7 @@ export class TrabajadorService {
         list_id_regimen_pension_estado: true,
         list_id_regimen_salud: true,
         list_id_tipo_cuent_banco: true,
+        trabajadorConcepto: true,
         persona: {
           list_tipo_doc_per: true,
           list_id_pais_nac: true,
@@ -161,4 +202,10 @@ export class TrabajadorService {
 
     throw new InternalServerErrorException();
   };
+
+
+
+
+
+  
 }
