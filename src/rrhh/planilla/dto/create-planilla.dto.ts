@@ -23,4 +23,8 @@ export class CreatePlanillaDto {
   @Transform(({ value }) => (value !== '' ? value : null))
   @IsOptional()
   obs_planilla: string;
+
+  @IsString()
+  @IsOptional()
+  num_planilla: string;
 }
