@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity({ schema: 'qubytss_core', name: 'mes' })
 export class Mes {
   @PrimaryColumn()
-  id_mes: number;
+  id_mes: string;
 
   @Column()
   nomb_mes: string;
