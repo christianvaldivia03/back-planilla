@@ -5,9 +5,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   OneToOne,
   PrimaryColumn,
 } from 'typeorm';
+import { TrabajadorConcepto } from './trabajadorConcepto.entity';
 
 @Entity({ schema: 'qubytss_rrhh' })
 export class Trabajador {
@@ -168,4 +170,14 @@ export class Trabajador {
     referencedColumnName: 'id_lista',
   })
   list_id_tipo_cuent_banco: List;
+
+  @OneToMany(
+    () => TrabajadorConcepto,
+    (trabajadorConcepto) => trabajadorConcepto.trabajador,
+  )
+  @JoinColumn([
+    { name: 'id_persona', referencedColumnName: 'id_persona' },
+    { name: 'id_corr_trab', referencedColumnName: 'id_corr_trab' },
+  ])
+  trabajadorConcepto: TrabajadorConcepto[];
 }
