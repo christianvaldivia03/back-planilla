@@ -6,7 +6,9 @@ import {
   MaxLength,
   IsBoolean,
   IsDate,
+  IsArray,
 } from 'class-validator';
+import { TrabajadorConcepto } from '../entities/trabajadorConcepto.entity';
 
 export class CreateTrabajadorDto {
   @IsInt()
@@ -177,4 +179,8 @@ export class CreateTrabajadorDto {
   @IsInt()
   @IsOptional()
   id_filefoto: number;
+
+  @IsOptional()
+  @IsArray()
+  trabajador_concepto: TrabajadorConcepto[];
 }
