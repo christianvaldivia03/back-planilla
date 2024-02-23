@@ -13,7 +13,7 @@ export class ConceptoService {
   ) {}
 
   create(createConceptoDto: CreateConceptoDto) {
-    return 'This action adds a new concepto';
+    return createConceptoDto;
   }
 
   async searchList(searchConceptoDto: UpdateConceptoDto) {

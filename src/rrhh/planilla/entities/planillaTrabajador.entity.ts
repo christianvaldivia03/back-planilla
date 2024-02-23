@@ -77,6 +77,9 @@ export class PlanillaTrabajador {
   persona: Persona;
 
   @OneToOne(() => Trabajador)
-  @JoinColumn([{ name: 'id_persona', referencedColumnName: 'id_persona' }, { name: 'id_corr_trab', referencedColumnName: 'id_corr_trab' }])
+  @JoinColumn([
+    { name: 'id_persona', referencedColumnName: 'id_persona' },
+    { name: 'id_corr_trab', referencedColumnName: 'id_corr_trab' },
+  ])
   trabajador: Trabajador;
 }

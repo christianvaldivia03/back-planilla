@@ -34,7 +34,7 @@ export class TrabajadorService {
     idpersona,
     idcorrtrab,
   ) {
-    let retorno = [];
+    const retorno = [];
     console.log(data);
     for (let i = 0; i < data.length; i++) {
       let dataTrabajadorConcepto =
@@ -202,10 +202,4 @@ export class TrabajadorService {
 
     throw new InternalServerErrorException();
   };
-
-
-
-
-
-  
 }

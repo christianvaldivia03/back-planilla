@@ -3,11 +3,9 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   OneToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { Planilla } from './planilla.entity';
 import { PlanillaTrabajador } from './planillaTrabajador.entity';
 import { Concepto } from 'src/rrhh/concepto/entities/concepto.entity';
 

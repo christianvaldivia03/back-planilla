@@ -2,11 +2,9 @@ import {
   Column,
   Entity,
   JoinColumn,
-  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { PlanillaTrabajador } from './planillaTrabajador.entity';
 import { Mes } from 'src/core/mantenimiento/entities/mes.entity';

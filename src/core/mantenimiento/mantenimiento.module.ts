@@ -21,7 +21,7 @@ import { Mes } from './entities/mes.entity';
       PlanillaTipo,
       EmployeeType,
       Anio,
-      Mes,  
+      Mes,
     ]),
   ],
 })

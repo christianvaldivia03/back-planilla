@@ -87,23 +87,6 @@ export class PersonaService {
     return persona;
   }
 
-  // async buscarOnePersonaData(searchPersonaDto: SearchPersonaDto) {
-  //   const ob = searchPersonaDto;
-  //   // const persona = await this.personaRepository.findOneBy({
-  //   //   id_persona: ob.id_persona,
-  //   // });
-  //   // let persona = {};
-  //   const persona = await this.personaRepository
-  //     .createQueryBuilder('persona')
-  //     .leftJoinAndSelect('persona.list_tipo_doc_per', 'li')
-  //     .leftJoinAndSelect('persona.list_id_pais_nac', 'li2')
-  //     .leftJoinAndSelect('persona.list_id_pais_emisor_doc', 'li3')
-  //     .where('persona.id_persona = :id_persona', ob)
-  //     .getOne();
-  //   if (!persona) throw new BadRequestException('No se encontro la persona');
-  //   return persona;
-  // }
-
   async buscarOnePersonaData(searchPersonaDto: SearchPersonaDto) {
     const ob = searchPersonaDto;
     const persona = await this.personaRepository.findOneBy({
@@ -116,6 +99,8 @@ export class PersonaService {
     });
     const { id_pais_emisor_doc, fech_nac_per, id_ubigeo_nac, ...person } =
       persona;
+    if (id_pais_emisor_doc && fech_nac_per && id_ubigeo_nac) {
+    }
 
     return person;
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { ConceptoService } from './concepto.service';
 import { CreateConceptoDto } from './dto/create-concepto.dto';
 import { UpdateConceptoDto } from './dto/update-concepto.dto';

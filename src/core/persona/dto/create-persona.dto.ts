@@ -25,7 +25,7 @@ export class CreatePersonaDto {
   @IsString()
   @IsOptional()
   direc_per: string;
-  
+
   @MaxLength(1)
   @IsOptional()
   sex_per: string;

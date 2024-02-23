@@ -3,8 +3,7 @@ import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Planilla } from './entities/planilla.entity';
-import { DataSource, ILike, In, QueryRunner, Repository } from 'typeorm';
-import { max } from 'rxjs';
+import { DataSource, ILike, In, Repository } from 'typeorm';
 import { PlanillaTrabajador } from './entities/planillaTrabajador.entity';
 import { Trabajador } from '../trabajador/entities/trabajador.entity';
 import { PlanillaTrabajadorConcepto } from './entities/planillaTrabajadorConcepto';
@@ -90,40 +89,9 @@ export class PlanillaService {
     return planillaFinal;
   }
 
-  async createPlanilla(createPlanillaDto: CreatePlanillaDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const maxIdPlanilla = await this.planillaRepository
-        .createQueryBuilder('planilla')
-        .select('coalesce(MAX(planilla.id_planilla), 0) +1', 'maxId')
-        .getRawOne();
-      const planillaData = await this.planillaRepository.create({
-        ...createPlanillaDto,
-        id_planilla: maxIdPlanilla.maxId,
-      });
-      await queryRunner.manager.save(planillaData);
-      const numPlanilla = await this.planillaRepository
-        .createQueryBuilder('x')
-        .select(
-          'qubytss_rrhh.get_cod_planilla(' + planillaData.id_planilla + ')',
-          'numPlanilla',
-        )
-        .getRawOne();
-      await queryRunner.commitTransaction();
-      await queryRunner.release();
-      return 'acción completada';
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      await queryRunner.release();
-      throw error;
-    }
-  }
-
   async searchList(updatePlanillaDto: UpdatePlanillaDto) {
     const search = updatePlanillaDto;
-    let objWhere: {
+    const objWhere: {
       id_tipo_planilla?: number;
       id_anio?: number;
       id_mes?: string;

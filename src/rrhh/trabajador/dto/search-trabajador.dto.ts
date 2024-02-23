@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTrabajadorDto } from './create-trabajador.dto';
-import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class SearchTrabajadorDto extends PartialType(CreateTrabajadorDto) {
   @IsString()
