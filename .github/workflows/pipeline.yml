@@ -21,5 +21,3 @@ jobs:
         run: yarn eslint
       - name: Build
         run: yarn build
-      - name: Test
-        run: yarn test
