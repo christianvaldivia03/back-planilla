@@ -7,8 +7,6 @@ on:
     # Only trigger when changes are made within the 'frontend/' directory
     paths:
       - '.'
-defaults:
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
