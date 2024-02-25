@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Persona } from './entities/persona.entity';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { SearchPersonaDto, CreatePersonaDto, UpdatePersonaDto } from './dto';
 
 @Injectable()
@@ -52,40 +52,46 @@ export class PersonaService {
 
   async buscarPersonaData(searchPersonaDto: SearchPersonaDto) {
     const ob = searchPersonaDto;
-    let persona = [];
-    let query: string = 'true';
-    query += this.validador(ob.nro_doc_per)
-      ? ' AND persona.nro_doc_per ~* :nro_doc_per'
-      : '';
-    query += this.validador(ob.ape_pat_per)
-      ? ' AND persona.ape_pat_per ~* :ape_pat_per'
-      : '';
-    query += this.validador(ob.ape_mat_per)
-      ? ' AND persona.ape_mat_per ~* :ape_mat_per'
-      : '';
-    query += this.validador(ob.nomb_per)
-      ? ' AND persona.nomb_per ~* :nomb_per'
-      : '';
-    query += this.validador(ob.tipo_per)
-      ? ' AND persona.tipo_per = :tipo_per'
-      : '';
-    query += this.validador(ob.tipo_doc_per)
-      ? ' AND persona.tipo_doc_per = :tipo_doc_per'
-      : '';
-    query += this.validador(ob.sex_per)
-      ? ' AND persona.sex_per = :sex_per'
-      : '';
+    const objWhere: {
+      nro_doc_per?: any;
+      ape_pat_per?: any;
+      ape_mat_per?: any;
+      nomb_per?: any;
+      tipo_per?: string;
+      tipo_doc_per?: number;
+      sex_per?: string;
+    } = {};
 
-    persona = await this.personaRepository
-      .createQueryBuilder('persona')
-      .leftJoinAndSelect('persona.list_tipo_doc_per', 'li')
-      .leftJoinAndSelect('persona.list_id_pais_nac', 'li2')
-      .leftJoinAndSelect('persona.list_id_pais_emisor_doc', 'li3')
-      .where(query, ob)
-      .getMany();
+    if (ob.nro_doc_per)
+      objWhere.nro_doc_per = ILike('%' + ob.nro_doc_per + '%');
+
+    if (ob.ape_pat_per)
+      objWhere.ape_pat_per = ILike('%' + ob.ape_pat_per + '%');
+
+    if (ob.ape_mat_per)
+      objWhere.ape_mat_per = ILike('%' + ob.ape_mat_per + '%');
+
+    if (ob.nomb_per) objWhere.nomb_per = ILike('%' + ob.nomb_per + '%');
+
+    if (ob.tipo_per) objWhere.tipo_per = ob.tipo_per;
+
+    if (ob.tipo_doc_per) objWhere.tipo_doc_per = ob.tipo_doc_per;
+
+    if (ob.sex_per) objWhere.sex_per = ob.sex_per;
+
+    const persona = await this.personaRepository.find({
+      relations: {
+        list_tipo_doc_per: true,
+        list_id_pais_nac: true,
+        list_id_pais_emisor_doc: true,
+      },
+      where: objWhere,
+      order: { ape_pat_per: 'ASC', ape_mat_per: 'ASC', nomb_per: 'ASC' },
+    });
 
     return persona;
   }
+
 
   async buscarOnePersonaData(searchPersonaDto: SearchPersonaDto) {
     const ob = searchPersonaDto;
