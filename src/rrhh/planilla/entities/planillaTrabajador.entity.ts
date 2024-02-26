@@ -39,6 +39,9 @@ export class PlanillaTrabajador {
   @Column()
   id_regimen_pension_estado: number;
 
+  @Column()
+  observacion: string;
+
   @ManyToOne(() => Planilla)
   @JoinColumn({ name: 'id_planilla', referencedColumnName: 'id_planilla' })
   planilla: Planilla;

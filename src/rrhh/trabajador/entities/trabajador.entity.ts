@@ -10,6 +10,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { TrabajadorConcepto } from './trabajadorConcepto.entity';
+import { EmployeeType } from './trabajadortipo.entity';
 
 @Entity({ schema: 'qubytss_rrhh' })
 export class Trabajador {
@@ -180,4 +181,11 @@ export class Trabajador {
     { name: 'id_corr_trab', referencedColumnName: 'id_corr_trab' },
   ])
   trabajadorConcepto: TrabajadorConcepto[];
+
+  @OneToOne(() => EmployeeType)
+  @JoinColumn({
+    name: 'id_tipo_trabajador',
+    referencedColumnName: 'id_tipo_trabajador',
+  })
+  list_tipo_trabajador: EmployeeType;
 }

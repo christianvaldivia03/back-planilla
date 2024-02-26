@@ -11,4 +11,5 @@ export class SearchPlanillaTrabajador extends PartialType(UpdatePlanillaDto) {
   @IsInt()
   @Transform((params) => parseInt(params.value))
   id_corr_trab: number;
+
 }

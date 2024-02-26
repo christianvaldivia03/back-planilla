@@ -3,6 +3,7 @@ import { PlanillaService } from './planilla.service';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
 import { SearchPlanillaTrabajador } from './dto/search-planilla-concepto.dto';
+import { SearchArrayPlanilla } from './dto/searchArrayPlanilla.dto';
 
 @Controller('rrhh/planilla')
 export class PlanillaController {
@@ -19,8 +20,26 @@ export class PlanillaController {
   }
 
   @Post('search-one')
-  searchOne(@Body() searchPlanillaDto: UpdatePlanillaDto) {
-    return this.planillaService.searchOnePlanilla(searchPlanillaDto);
+  async searchOne(@Body() searchPlanillaDto: UpdatePlanillaDto) {
+    return {
+      dataPlanilla:
+        await this.planillaService.searchOnePlanilla(searchPlanillaDto),
+      planillatrabajador:
+        await this.planillaService.searchEmployeePlanillaDetail(
+          searchPlanillaDto,
+        ),
+    };
+  }
+  @Post('search-datail-employee')
+  async searchPlanillaEmployee(@Body() searchPlanillaDto: UpdatePlanillaDto) {
+    return {
+      dataPlanilla:
+        await this.planillaService.searchOnePlanilla(searchPlanillaDto),
+      planillatrabajador:
+        await this.planillaService.searchEmployeePlanillaDetail(
+          searchPlanillaDto,
+        ),
+    };
   }
 
   @Post('search-concepto')
@@ -28,5 +47,11 @@ export class PlanillaController {
     @Body() searchPlanillaTrabajadorDto: SearchPlanillaTrabajador,
   ) {
     return this.planillaService.searchConcepto(searchPlanillaTrabajadorDto);
+  }
+
+  @Post('add-employee')
+  addEmployee(@Body() searchArrayPlanilla: SearchArrayPlanilla) {
+    console.log('searchPersonaDto', searchArrayPlanilla);
+    return this.planillaService.addEmployee(searchArrayPlanilla);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +9,7 @@ import { Trabajador } from '../trabajador/entities/trabajador.entity';
 import { PlanillaTrabajadorConcepto } from './entities/planillaTrabajadorConcepto';
 import { TrabajadorConcepto } from '../trabajador/entities/trabajadorConcepto.entity';
 import { SearchPlanillaTrabajador } from './dto/search-planilla-concepto.dto';
+import { SearchArrayPlanilla } from './dto/searchArrayPlanilla.dto';
 
 @Injectable()
 export class PlanillaService {
@@ -109,6 +110,10 @@ export class PlanillaService {
 
     const planilla = await this.planillaRepository.find({
       where: objWhere,
+      relations: {
+        planillatipo: true,
+        trabajadortipo: true,
+      },
       order: {
         id_planilla: 'ASC',
       },
@@ -120,14 +125,6 @@ export class PlanillaService {
     const { id_planilla } = updatePlanillaDto;
     const planilla = await this.planillaRepository.findOne({
       relations: {
-        planillatrabajador: {
-          // planillatrabajadorconcepto: true,
-          list_id_regimen_pension: true,
-          list_id_regimen_salud: true,
-          list_id_regimen_pension_estado: true,
-          persona: true,
-          trabajador: true,
-        },
         mes: true,
         planillatipo: true,
         trabajadortipo: true,
@@ -136,7 +133,93 @@ export class PlanillaService {
         id_planilla: id_planilla,
       },
     });
+
+    // planilla.planillatrabajador = planilla.planillatrabajador.map((per) => {
+    //   const full_name = `${per.persona.ape_pat_per} ${per.persona.ape_mat_per} ${per.persona.nomb_per}`;
+    //   return { ...per, full_name };
+    // });
+
     return planilla;
+  }
+
+  async searchEmployeePlanillaDetail(updatePlanillaDto: UpdatePlanillaDto) {
+    const planillaTrabajador = await this.planillaTrabajador.find({
+      relations: {
+        trabajador: true,
+        persona: true,
+        list_id_regimen_pension: true,
+        list_id_regimen_salud: true,
+      },
+      where: {
+        id_planilla: updatePlanillaDto.id_planilla,
+      },
+      order: {
+        persona: {
+          ape_pat_per: 'ASC',
+          ape_mat_per: 'ASC',
+          nomb_per: 'ASC',
+        },
+      },
+    });
+
+    const newPlanillaTrabajador = planillaTrabajador.map((per) => {
+      const full_name = `${per.persona.ape_pat_per} ${per.persona.ape_mat_per} ${per.persona.nomb_per}`;
+      return { ...per, full_name };
+    });
+    return newPlanillaTrabajador;
+  }
+
+  async addEmployee(searchArrayPlanilla: SearchArrayPlanilla) {
+    for (const iterator of searchArrayPlanilla.data) {
+      //buscar trabajador
+      const trabajador = await this.trabajadorRepository.findOne({
+        relations: {
+          trabajadorConcepto: true,
+        },
+        where: {
+          id_persona: iterator.id_persona,
+          id_corr_trab: iterator.id_corr_trab,
+        },
+      });
+      //si no se encuentra el trabajador
+      if (!trabajador)
+        throw new BadRequestException('No se encontro el trabajador');
+      //buscar si el trabajador ya esta en la planilla
+      const exist = await this.planillaTrabajador.findOne({
+        where: {
+          id_planilla: iterator.id_planilla,
+          id_persona: iterator.id_persona,
+          id_corr_trab: iterator.id_corr_trab,
+        },
+      });
+      if (exist)
+        throw new BadRequestException('El trabajador ya esta en la planilla');
+      //crear planilla trabajador
+      const planillaEmployee = await this.planillaTrabajador.create({
+        id_planilla: iterator.id_planilla,
+        id_persona: trabajador.id_persona,
+        id_corr_trab: trabajador.id_corr_trab,
+        id_tipo_personal_pla: trabajador.id_tipo_trabajador,
+        id_regimen_salud: trabajador.id_regimen_salud,
+        id_regimen_pension: trabajador.id_regimen_pension,
+        id_regimen_pension_estado: trabajador.id_regimen_pension_estado,
+      });
+      await this.planillaTrabajador.save(planillaEmployee);
+      for (const it of trabajador.trabajadorConcepto) {
+        const planillaEmployeeConcepto =
+          await this.planillaTrabajadorConcepto.create({
+            id_planilla: iterator.id_planilla,
+            id_persona: it.id_persona,
+            id_corr_trab: it.id_corr_trab,
+            id_concepto: it.id_concepto,
+            monto_conc: it.monto_conc,
+          });
+        await this.planillaTrabajadorConcepto.save(planillaEmployeeConcepto);
+      }
+    }
+    return this.searchEmployeePlanillaDetail({
+      id_planilla: searchArrayPlanilla.data[0].id_planilla,
+    });
   }
 
   async searchConcepto(searchPlanillaTrabajador: SearchPlanillaTrabajador) {

@@ -19,6 +19,7 @@ export class PersonaController {
 
   @Post('one-search')
   buscarOnePersonaData(@Body() searchPersonaDto: SearchPersonaDto) {
+
     return this.personaService.buscarOnePersonaData(searchPersonaDto);
   }
 

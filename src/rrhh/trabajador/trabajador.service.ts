@@ -142,6 +142,7 @@ export class TrabajadorService {
     let employee = [];
     employee = await this.trabajadorRepository.find({
       relations: {
+        list_tipo_trabajador: true,
         list_id_regimen_pension: true,
         list_id_regimen_pension_estado: true,
         list_id_regimen_salud: true,
@@ -178,8 +179,11 @@ export class TrabajadorService {
         },
       },
     });
-
-    return employee;
+    const employeeFinal = employee.map((employee: Trabajador) => {
+      const full_name = `${employee.persona.ape_pat_per} ${employee.persona.ape_mat_per} ${employee.persona.nomb_per} `;
+      return { ...employee, full_name };
+    });
+    return employeeFinal;
   }
 
   async findOneEmployee(id: number, id_corr_trab: number) {
