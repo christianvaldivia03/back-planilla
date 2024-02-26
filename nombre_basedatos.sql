@@ -67,6 +67,161 @@ $$;
 ALTER FUNCTION qubytss_core.get_next_correlativo(keycorr character varying) OWNER TO qubytss_core;
 
 --
+-- Name: ejecutar_function(character varying, integer, integer, integer, integer, character varying, integer); Type: FUNCTION; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE FUNCTION qubytss_rrhh.ejecutar_function(namefunction character varying, idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer, tipodesc character varying, idclasificador integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+      v_resp    numeric(19,4);
+      v_tipoplanilla integer;
+      v_cantidad integer;
+BEGIN
+
+   EXECUTE 'SELECT '||namefunction||'($1,$2,$3,$4)'
+   INTO v_resp
+   USING  idplanilla, idpersona, idcorrtrab, idconcepto;
+
+   IF idconcepto != 172 and idconcepto != 268 and idconcepto != 756 and idconcepto != 396
+   THEN
+
+       SELECT pl.id_tipo_planilla into v_tipoplanilla from planilla pl where pl.id_planilla = idplanilla;
+
+       if v_tipoplanilla != 1 AND tipodesc != 'N'
+       THEN
+
+           SELECT COUNT(ptc.id_concepto) into v_cantidad
+              FROM planilla_trabajador_concepto ptc
+                   INNER JOIN planilla pl
+                           ON ptc.id_planilla = pl.id_planilla
+             WHERE ptc.id_persona = idpersona
+                   AND ptc.id_corr_trab = idcorrtrab
+                   AND ptc.id_concepto = idconcepto
+                   AND pl.est_planilla != 0
+                   AND pl.id_tipo_planilla = 1
+                   AND pl.id_anio
+                       || pl.id_mes = (SELECT plt.id_anio
+                                              || plt.id_mes
+                                         FROM planilla plt
+                                        WHERE plt.id_planilla = idplanilla);
+
+            IF v_cantidad > 0
+            THEN
+                v_resp := 0;
+            END IF;
+
+       END IF;
+
+    END IF;
+
+   IF v_resp > 0
+   THEN
+
+   WITH upsert AS (UPDATE planilla_trabajador_concepto SET monto_conc=v_resp WHERE id_planilla=idplanilla AND id_persona=idpersona AND id_corr_trab = idcorrtrab AND id_concepto = idconcepto RETURNING *)
+    INSERT INTO planilla_trabajador_concepto (id_planilla,id_persona,id_corr_trab,id_concepto,monto_conc,tipo_conc_pla, id_clasificador) SELECT idplanilla, idpersona, idcorrtrab, idconcepto, v_resp, 2, idclasificador WHERE NOT EXISTS (SELECT * FROM upsert);
+
+   ELSE
+
+    DELETE FROM planilla_trabajador_concepto WHERE id_planilla=idplanilla AND id_persona=idpersona AND id_corr_trab = idcorrtrab AND id_concepto = idconcepto;
+
+   END IF;
+
+RETURN NULL;
+
+END;
+$_$;
+
+
+ALTER FUNCTION qubytss_rrhh.ejecutar_function(namefunction character varying, idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer, tipodesc character varying, idclasificador integer) OWNER TO qubytss_rrhh;
+
+--
+-- Name: get_aporte_19990(integer, integer, integer, integer); Type: FUNCTION; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE FUNCTION qubytss_rrhh.get_aporte_19990(idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer) RETURNS numeric
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+      v_num    numeric(19,2);
+      r record;
+BEGIN
+
+SELECT ec.*
+  INTO r
+  FROM  qubytss_rrhh.entidad_comision ec
+       INNER JOIN qubytss_rrhh.planilla pl
+               ON ec.id_anio = pl.id_anio
+                  AND ec.id_mes = pl.id_mes
+                  AND ec.id_regimen = 44957
+ WHERE EXISTS (SELECT id_corr_trab
+                 FROM qubytss_rrhh.planilla_trabajador tr
+                WHERE tr.id_persona = idpersona
+                      AND tr.id_planilla = idplanilla
+                      AND tr.id_corr_trab = idcorrtrab
+                      AND tr.id_regimen_pension = ec.id_regimen
+                      AND tr.id_regimen_pension_estado = 2601)
+       AND pl.id_planilla = idplanilla;
+
+SELECT ROUND(((ppc.monto_bruto_previsional) * r.aporte_obligatorio / 100 ),2)
+       INTO
+       v_num
+  FROM qubytss_rrhh.vw_planilla_trabajador_resumen_calculado ppc
+         WHERE ppc.id_persona = idpersona
+               AND ppc.id_corr_trab = idcorrtrab
+               AND ppc.id_planilla = idplanilla;
+
+    RETURN v_num;
+END;
+$$;
+
+
+ALTER FUNCTION qubytss_rrhh.get_aporte_19990(idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer) OWNER TO qubytss_rrhh;
+
+--
+-- Name: get_aporte_20530(integer, integer, integer, integer); Type: FUNCTION; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE FUNCTION qubytss_rrhh.get_aporte_20530(idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer) RETURNS numeric
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+      v_num    numeric(19,2);
+      r record;
+BEGIN
+
+SELECT ec.*
+  INTO r
+  FROM qubytss_rrhh.entidad_comision ec
+       INNER JOIN qubytss_rrhh.planilla pl
+               ON ec.id_anio = pl.id_anio
+                  AND ec.id_mes = pl.id_mes
+                  AND ec.id_regimen = 44958
+ WHERE EXISTS (SELECT id_corr_trab
+                 FROM qubytss_rrhh.planilla_trabajador tr
+                WHERE tr.id_persona = idpersona
+                      AND tr.id_planilla = idplanilla
+                      AND tr.id_corr_trab = idcorrtrab
+                      AND tr.id_regimen_pension = ec.id_regimen
+                      AND tr.id_regimen_pension_estado = 2601)
+       AND pl.id_planilla = idplanilla;
+
+SELECT ROUND(( (ppc.monto_bruto_previsional) * r.aporte_obligatorio / 100 ),2)
+       INTO
+       v_num
+  FROM qubytss_rrhh.vw_planilla_trabajador_resumen_calculado ppc
+         WHERE ppc.id_persona = idpersona
+               AND ppc.id_corr_trab = idcorrtrab
+               AND ppc.id_planilla = idplanilla;
+
+    RETURN v_num;
+END;
+$$;
+
+
+ALTER FUNCTION qubytss_rrhh.get_aporte_20530(idplanilla integer, idpersona integer, idcorrtrab integer, idconcepto integer) OWNER TO qubytss_rrhh;
+
+--
 -- Name: get_cod_planilla(integer); Type: FUNCTION; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
@@ -395,6 +550,40 @@ COMMENT ON COLUMN qubytss_core.persona.id_pais_emisor_doc IS 'País de nacimient
 
 
 --
+-- Name: vw_persona; Type: VIEW; Schema: qubytss_core; Owner: qubytss_core
+--
+
+CREATE VIEW qubytss_core.vw_persona AS
+ SELECT p.id_persona,
+    p.tipo_per,
+    p.tipo_doc_per,
+    p.nro_doc_per,
+    p.ape_pat_per,
+    p.ape_mat_per,
+    p.nomb_per,
+    (((((COALESCE(p.ape_pat_per, ''::character varying))::text || ' '::text) || (COALESCE(p.ape_mat_per, ''::character varying))::text) || ', '::text) || (p.nomb_per)::text) AS full_name_per,
+    p.direc_per,
+    p.est_civil_per,
+    p.sex_per,
+    p.fech_nac_per,
+    p.nro_ruc,
+        CASE "substring"((COALESCE(p.nro_ruc, (''::bpchar)::character varying))::text, 1, 2)
+            WHEN '20'::bpchar THEN 'S'::text
+            ELSE 'N'::text
+        END AS is_public,
+    p.id_pais_nac,
+    pa.desc_lista AS ds_pais_nac,
+    p.id_ubigeo_nac,
+    td.cod_lista AS nomb_tipo_doc_per,
+    p.id_pais_emisor_doc
+   FROM ((qubytss_core.persona p
+     LEFT JOIN qubytss_core.list pa ON ((p.id_pais_nac = pa.id_lista)))
+     LEFT JOIN qubytss_core.list td ON ((td.id_lista = p.tipo_doc_per)));
+
+
+ALTER VIEW qubytss_core.vw_persona OWNER TO qubytss_core;
+
+--
 -- Name: concepto; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
@@ -493,6 +682,26 @@ COMMENT ON COLUMN qubytss_rrhh.concepto.est_conc IS 'Estado del concepto (1=Acti
 
 
 --
+-- Name: entidad_comision; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE TABLE qubytss_rrhh.entidad_comision (
+    id_anio integer NOT NULL,
+    id_mes character varying(2) NOT NULL,
+    id_regimen integer NOT NULL,
+    comision_flujo numeric(5,2),
+    comision_mixta_flujo numeric(5,2),
+    comision_mixta_saldo numeric(5,2),
+    prima_seguro numeric(5,2),
+    aporte_obligatorio numeric(5,2),
+    monto_maximo numeric(18,2),
+    has_comision boolean
+);
+
+
+ALTER TABLE qubytss_rrhh.entidad_comision OWNER TO qubytss_rrhh;
+
+--
 -- Name: planilla; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
@@ -520,6 +729,140 @@ CREATE TABLE qubytss_rrhh.planilla (
 
 
 ALTER TABLE qubytss_rrhh.planilla OWNER TO qubytss_rrhh;
+
+--
+-- Name: planilla_formula_plantilla; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE TABLE qubytss_rrhh.planilla_formula_plantilla (
+    id_planilla_formula integer NOT NULL,
+    nomb_form_pla character varying(100),
+    desc_form_pla character varying(4000),
+    tipo_calculo character(1),
+    calc_form_pla character varying(1000),
+    cod_form_pla character varying(20) NOT NULL,
+    id_concepto_formula integer,
+    est_form_pla integer,
+    tipo_desc character(1)
+);
+
+
+ALTER TABLE qubytss_rrhh.planilla_formula_plantilla OWNER TO qubytss_rrhh;
+
+--
+-- Name: TABLE planilla_formula_plantilla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON TABLE qubytss_rrhh.planilla_formula_plantilla IS 'Plantilla de fórmulas para planillas';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.id_planilla_formula; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.id_planilla_formula IS 'Código único de fórmula de planilla';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.nomb_form_pla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.nomb_form_pla IS 'Nombre de la fórmula';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.desc_form_pla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.desc_form_pla IS 'Descripción de la fórmula';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.tipo_calculo; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.tipo_calculo IS 'Tipo de cálculo a realizar (M=Manual, C=Calculado, B=Base de Datos)';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.calc_form_pla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.calc_form_pla IS 'Expresión de la fórmula';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.cod_form_pla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.cod_form_pla IS 'Código de la fórmula';
+
+
+--
+-- Name: COLUMN planilla_formula_plantilla.id_concepto_formula; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_formula_plantilla.id_concepto_formula IS 'Código único del concepto a agregar en la planilla';
+
+
+--
+-- Name: planilla_plantilla; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE TABLE qubytss_rrhh.planilla_plantilla (
+    id_planilla_plantilla integer NOT NULL,
+    id_tipo_planilla integer,
+    id_tipo_trabajador integer,
+    id_estado_personal_pla integer,
+    id_clasificador integer,
+    est_plantilla integer,
+    is_valido integer
+);
+
+
+ALTER TABLE qubytss_rrhh.planilla_plantilla OWNER TO qubytss_rrhh;
+
+--
+-- Name: TABLE planilla_plantilla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON TABLE qubytss_rrhh.planilla_plantilla IS 'Plantilla de planillas';
+
+
+--
+-- Name: COLUMN planilla_plantilla.id_planilla_plantilla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_plantilla.id_planilla_plantilla IS 'Código único de plantilla de la planilla';
+
+
+--
+-- Name: COLUMN planilla_plantilla.id_tipo_planilla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_plantilla.id_tipo_planilla IS 'Tipo de planilla';
+
+
+--
+-- Name: COLUMN planilla_plantilla.id_tipo_trabajador; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_plantilla.id_tipo_trabajador IS 'Tipo de trabajador';
+
+
+--
+-- Name: COLUMN planilla_plantilla.id_estado_personal_pla; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_plantilla.id_estado_personal_pla IS 'Estado del trabajador en la planilla';
+
+
+--
+-- Name: COLUMN planilla_plantilla.id_clasificador; Type: COMMENT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COMMENT ON COLUMN qubytss_rrhh.planilla_plantilla.id_clasificador IS 'Clasificador';
+
 
 --
 -- Name: planilla_tipo; Type: TABLE; Schema: qubytss_rrhh; Owner: qubytss_rrhh
@@ -1148,6 +1491,179 @@ COMMENT ON COLUMN qubytss_rrhh.trabajador_tipo.est_tipo_trabajador IS 'Estado (1
 
 
 --
+-- Name: vw_planilla_trabajador_resumen_calculado; Type: VIEW; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE VIEW qubytss_rrhh.vw_planilla_trabajador_resumen_calculado AS
+ SELECT ptc.id_planilla,
+    pt.id_persona,
+    pt.id_corr_trab,
+    sum(
+        CASE c.tipo_conc
+            WHEN 1 THEN ptc.monto_conc
+            WHEN 3 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_remuneracion,
+    sum(
+        CASE c.id_concepto
+            WHEN 172 THEN ptc.monto_conc
+            WHEN 268 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_tardanzas_faltas,
+    sum(
+        CASE c.tipo_conc
+            WHEN 1 THEN
+            CASE c.bonif_ext
+                WHEN true THEN ptc.monto_conc
+                ELSE (0)::numeric
+            END
+            WHEN 3 THEN
+            CASE c.bonif_ext
+                WHEN true THEN ptc.monto_conc
+                ELSE (0)::numeric
+            END
+            ELSE (0)::numeric
+        END) AS monto_bonificaciones,
+    round(sum(
+        CASE c.tipo_conc
+            WHEN 1 THEN ptc.monto_conc
+            WHEN 2 THEN
+            CASE c.id_concepto
+                WHEN 172 THEN (('-1'::integer)::numeric * ptc.monto_conc)
+                WHEN 268 THEN (('-1'::integer)::numeric * ptc.monto_conc)
+                ELSE (0)::numeric
+            END
+            WHEN 3 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END), 2) AS monto_bruto,
+    sum(
+        CASE c.id_concepto
+            WHEN 396 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_cuarta,
+    sum(
+        CASE c.id_concepto
+            WHEN 543 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_judicial,
+    sum(
+        CASE c.id_concepto
+            WHEN 155 THEN ptc.monto_conc
+            WHEN 528 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_onp,
+    sum(
+        CASE c.id_concepto
+            WHEN 28 THEN ptc.monto_conc
+            WHEN 333 THEN ptc.monto_conc
+            WHEN 335 THEN ptc.monto_conc
+            WHEN 626 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_afp,
+    sum(
+        CASE c.tipo_conc
+            WHEN 2 THEN
+            CASE c.id_concepto
+                WHEN 172 THEN (0)::numeric
+                WHEN 268 THEN (0)::numeric
+                WHEN 396 THEN (0)::numeric
+                WHEN 543 THEN (0)::numeric
+                WHEN 155 THEN (0)::numeric
+                WHEN 528 THEN (0)::numeric
+                WHEN 28 THEN (0)::numeric
+                WHEN 333 THEN (0)::numeric
+                WHEN 335 THEN (0)::numeric
+                WHEN 626 THEN (0)::numeric
+                ELSE ptc.monto_conc
+            END
+            ELSE (0)::numeric
+        END) AS monto_otro,
+    round(sum(
+        CASE c.tipo_conc
+            WHEN 1 THEN ptc.monto_conc
+            WHEN 2 THEN (('-1'::integer)::numeric * ptc.monto_conc)
+            WHEN 3 THEN ptc.monto_conc
+            WHEN 4 THEN
+            CASE c.id_concepto
+                WHEN 124 THEN (0)::numeric
+                ELSE (('-1'::integer)::numeric * ptc.monto_conc)
+            END
+            ELSE (0)::numeric
+        END), 2) AS monto_neto,
+    sum(
+        CASE c.id_concepto
+            WHEN 124 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_essalud,
+    round(sum(
+        CASE c.tipo_conc
+            WHEN 2 THEN ptc.monto_conc
+            WHEN 4 THEN
+            CASE c.id_concepto
+                WHEN 124 THEN (0)::numeric
+                ELSE ptc.monto_conc
+            END
+            ELSE (0)::numeric
+        END), 2) AS monto_descuento,
+    pt.id_unidad,
+    pt.id_area,
+    sum(
+        CASE c.id_concepto
+            WHEN 156 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_quinta,
+    sum(
+        CASE c.tipo_conc
+            WHEN 3 THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END) AS monto_reintegro,
+    round(sum(
+        CASE
+            WHEN ((c.tipo_conc = 1) AND (c.afecto_essalud = true)) THEN ptc.monto_conc
+            WHEN (c.tipo_conc = 2) THEN
+            CASE
+                WHEN (c.id_concepto = ANY (ARRAY[172, 268])) THEN (('-1'::integer)::numeric * ptc.monto_conc)
+                ELSE (0)::numeric
+            END
+            WHEN ((c.tipo_conc = 3) AND (c.afecto_essalud = true)) THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END), 2) AS monto_bruto_essalud,
+    round(sum(
+        CASE
+            WHEN ((c.tipo_conc = 1) AND (c.afecto_previsional = true)) THEN ptc.monto_conc
+            WHEN (c.tipo_conc = 2) THEN
+            CASE
+                WHEN (c.id_concepto = ANY (ARRAY[172, 268])) THEN (('-1'::integer)::numeric * ptc.monto_conc)
+                ELSE (0)::numeric
+            END
+            WHEN ((c.tipo_conc = 3) AND (c.afecto_previsional = true)) THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END), 2) AS monto_bruto_previsional,
+    round(sum(
+        CASE
+            WHEN ((c.tipo_conc = 1) AND (c.afecto_impuesto = true)) THEN ptc.monto_conc
+            WHEN (c.tipo_conc = 2) THEN
+            CASE
+                WHEN (c.id_concepto = ANY (ARRAY[172, 268])) THEN (('-1'::integer)::numeric * ptc.monto_conc)
+                ELSE (0)::numeric
+            END
+            WHEN ((c.tipo_conc = 3) AND (c.afecto_impuesto = true)) THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END), 2) AS monto_bruto_impuesto,
+    round(sum(
+        CASE
+            WHEN (c.id_concepto = 308) THEN ptc.monto_conc
+            ELSE (0)::numeric
+        END), 2) AS monto_subvencion
+   FROM ((qubytss_rrhh.planilla_trabajador_concepto ptc
+     JOIN qubytss_rrhh.planilla_trabajador pt ON (((ptc.id_planilla = pt.id_planilla) AND (ptc.id_persona = pt.id_persona) AND (ptc.id_corr_trab = pt.id_corr_trab))))
+     JOIN qubytss_rrhh.concepto c ON ((ptc.id_concepto = c.id_concepto)))
+  GROUP BY ptc.id_planilla, pt.id_persona, pt.id_corr_trab, pt.id_unidad, pt.id_area;
+
+
+ALTER VIEW qubytss_rrhh.vw_planilla_trabajador_resumen_calculado OWNER TO qubytss_rrhh;
+
+--
 -- Data for Name: anio; Type: TABLE DATA; Schema: public; Owner: qubytss_core
 --
 
@@ -1188,6 +1704,7 @@ PLANILLA.RRHH.PL.2024.02.01.2	2
 PLANILLA.RRHH.PL.2016.8.04.4	39
 PLANILLA.RRHH.PL.2024.02.01.1	7
 PLANILLA.RRHH.PL.2024.02.03.3	7
+PLANILLA.RRHH.PL.2024.04.01.2	11
 \.
 
 
@@ -10458,24 +10975,24 @@ COPY qubytss_core.mes (id_mes, nomb_mes, nomb_cort_mes) FROM stdin;
 --
 
 COPY qubytss_core.persona (id_persona, tipo_per, tipo_doc_per, nro_doc_per, ape_pat_per, ape_mat_per, nomb_per, direc_per, sex_per, fech_nac_per, id_pais_nac, aud_fech_crea, est_civil_per, id_ubigeo_nac, nro_ruc, id_pais_emisor_doc) FROM stdin;
-69	2	101		wqewqe	wweewq	wqewqe	ewqew	M	\N	2079	2024-01-29	S	\N	2132321	\N
-52	2	100	11223344	Rodriguez	Lopez	Carlos	Av. Principal 456	F	1978-03-25	2087	2024-01-15	 	\N		\N
-48	N	100	77657768	VALDIVIA	QUISPE	CHRISTIAN	av canta callao	M	2024-01-14	2087	2024-01-15	\N	\N	\N	\N
-65	 	100	32432324	Rodriguez	Lopez	Carlos	Av. Principal 456	M	1978-03-25	2079	2024-01-17	C	\N	45435435	\N
-59	1	100	543543345	Martinez	García	Javier	sadsad	M	\N	2015	2024-01-15	C	\N	dsasa	\N
-58	1	100	435435453	Cabrera	García	Javier	sadsadsad	M	\N	2012	2024-01-15	C	\N	dsadsa	\N
+69	N	101		wqewqe	wweewq	wqewqe	ewqew	M	\N	2079	2024-01-29	S	\N	2132321	\N
+59	N	100	543543345	Martinez	García	Javier	sadsad	M	\N	2015	2024-01-15	C	\N	dsasa	\N
+94	N	100	3432432	Rodriguez	32432	fdgfgfdgfdg	ewrew	M	\N	2079	2024-02-08	C	\N	324324	\N
+95	N	115	43432	fdsfds	dfsfds	dfsfds	fdsf	M	\N	1935	2024-02-17	S	\N	324324	\N
+73	N	100	56464654	Rodriguez	Valdivia Quispe	Christian Guillermo Arturo	av canta callao AH san Martin	M	\N	1955	2024-02-03	C	\N	45435435	\N
+6	N	113	324324	Tako	Valdivia	Christian	av canta callao AH san Martin	M	2024-01-14	1935	2024-01-13	C	\N	43243243	2087
+75	N	100	32423432	Tako	fdsds	Christian	av universitaria	M	\N	1955	2024-02-03	C	\N	43243243	\N
+58	N	100	435435453	Cabrera	García	Javier	sadsadsad	M	\N	2012	2024-01-15	C	\N	dsadsa	\N
+48	N	115	77657768	VALDIVIA	QUISPE	CHRISTIAN	av canta callao	M	2024-01-14	1936	2024-01-15	S	\N	322432	\N
+71	N	100	12345678	Tako	Valdivia	Christian	av universitaria	M	\N	1955	2024-02-03	C	\N	43243243	\N
+52	N	2079	11223344	Rodriguez	Lopez	Carlos	Av. Principal 456	F	1978-03-25	2087	2024-01-15	 	\N	32432	\N
 45	N	100	45674345	Santillan	Messi	nn		 	\N	2054	2024-01-14	 	\N		\N
 62	N	100	32434234324	López	Tako	Javier	435435	F	\N	2014	2024-01-15	D	\N	4543543	\N
 55	N	100	99887766	Díaz	Pérez	Lucía	Calle Progreso 456	M	\N	2016	2024-01-15	C	\N	44432434324	\N
-70	1	101	435435435	erewr	ewrwe	ewrwe	ewrew	M	\N	2087	2024-02-01	C	\N	wrewrewr	\N
 51	N	100	123643435	Gomez	Perez	Maria	Calle 123, Ciudad	F	1985-08-10	2080	2024-01-15	 	\N		\N
-93	2	100	54345	54353543	54354353	5435435	4353534	F	\N	2078	2024-02-03	C	\N	4354354	\N
-6	1	113	324324	Tako	Valdivia	Christian	av canta callao AH san Martin	M	2024-01-14	1935	2024-01-13	C	\N	43243243	2087
-71	1	100	12345678	Tako	Valdivia Quispe	Christian	av universitaria	M	\N	1955	2024-02-03	C	\N	43243243	\N
-75	1	100	32423432	Tako	fdsds	Christian	av universitaria	M	\N	1955	2024-02-03	C	\N	43243243	\N
-73	1	100	56464654	Rodriguez	Valdivia Quispe	Christian Guillermo Arturo	av canta callao AH san Martin	M	\N	1955	2024-02-03	C	\N	45435435	\N
-94	2	100	3432432	Rodriguez	32432	fdgfgfdgfdg	ewrew	M	\N	2079	2024-02-08	C	\N	324324	\N
-95	2	115	43432	fdsfds	dfsfds	dfsfds	fdsf	M	\N	1935	2024-02-17	S	\N	324324	\N
+65	N	100	32432324	Rodriguez	Lopez	Carlos	Av. Principal 456	M	1978-03-25	2079	2024-01-17	C	\N	45435435	\N
+93	J	100	54345434	54353543	54354353	5435435	4353534	F	\N	2078	2024-02-03	C	\N	4354354	\N
+70	N	101	435435435	erewr	tdsf	ewrwe	ewrew	M	\N	2087	2024-02-01	C	\N	wrewrewr	\N
 \.
 
 
@@ -11287,6 +11804,483 @@ COPY qubytss_rrhh.concepto (id_concepto, cod_conc, nomb_conc, tipo_conc, fech_re
 
 
 --
+-- Data for Name: entidad_comision; Type: TABLE DATA; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COPY qubytss_rrhh.entidad_comision (id_anio, id_mes, id_regimen, comision_flujo, comision_mixta_flujo, comision_mixta_saldo, prima_seguro, aporte_obligatorio, monto_maximo, has_comision) FROM stdin;
+2019	07	44957	\N	\N	\N	\N	13.00	\N	f
+2019	07	44958	\N	\N	\N	\N	13.00	\N	f
+2019	07	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	07	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	07	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	07	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	07	44974	\N	\N	\N	\N	9.00	\N	f
+2019	08	44957	\N	\N	\N	\N	13.00	\N	f
+2019	08	44958	\N	\N	\N	\N	13.00	\N	f
+2019	08	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	08	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	08	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	08	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	08	44974	\N	\N	\N	\N	9.00	\N	f
+2019	09	44957	\N	\N	\N	\N	13.00	\N	f
+2019	09	44958	\N	\N	\N	\N	13.00	\N	f
+2019	09	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	09	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	09	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	09	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	09	44974	\N	\N	\N	\N	9.00	\N	f
+2019	10	44957	\N	\N	\N	\N	13.00	\N	f
+2019	10	44958	\N	\N	\N	\N	13.00	\N	f
+2019	10	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	10	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	10	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	10	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	10	44974	\N	\N	\N	\N	9.00	\N	f
+2019	11	44957	\N	\N	\N	\N	13.00	\N	f
+2019	11	44958	\N	\N	\N	\N	13.00	\N	f
+2019	11	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	11	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	11	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	11	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	11	44974	\N	\N	\N	\N	9.00	\N	f
+2019	12	44957	\N	\N	\N	\N	13.00	\N	f
+2019	12	44958	\N	\N	\N	\N	13.00	\N	f
+2019	12	44967	1.55	0.00	0.82	1.35	10.00	9639.00	t
+2019	12	44969	1.69	0.67	1.20	1.35	10.00	9639.00	t
+2019	12	44970	1.60	0.18	1.25	1.35	10.00	9639.00	t
+2019	12	44971	1.47	0.38	1.25	1.35	10.00	9639.00	t
+2019	12	44974	\N	\N	\N	\N	9.00	\N	f
+2020	01	44957	\N	\N	\N	\N	13.00	\N	f
+2020	01	44958	\N	\N	\N	\N	13.00	\N	f
+2020	01	44967	1.55	0.00	0.82	1.35	10.00	9707.03	t
+2020	01	44969	1.69	0.67	1.20	1.35	10.00	9707.03	t
+2020	01	44970	1.60	0.18	1.25	1.35	10.00	9707.03	t
+2020	01	44971	1.47	0.38	1.25	1.35	10.00	9707.03	t
+2020	01	44974	\N	\N	\N	\N	9.00	\N	f
+2020	02	44957	\N	\N	\N	\N	13.00	\N	f
+2020	02	44958	\N	\N	\N	\N	13.00	\N	f
+2020	02	44967	1.55	0.00	0.82	1.35	10.00	9707.03	t
+2020	02	44969	1.69	0.67	1.20	1.35	10.00	9707.03	t
+2020	02	44970	1.60	0.18	1.25	1.35	10.00	9707.03	t
+2020	02	44971	1.47	0.38	1.25	1.35	10.00	9707.03	t
+2020	02	44974	\N	\N	\N	\N	9.00	\N	f
+2020	03	44957	\N	\N	\N	\N	13.00	\N	f
+2020	03	44958	\N	\N	\N	\N	13.00	\N	f
+2020	03	44967	1.55	0.00	0.82	1.35	10.00	9707.03	t
+2020	03	44969	1.69	0.67	1.20	1.35	10.00	9707.03	t
+2020	03	44970	1.60	0.18	1.25	1.35	10.00	9707.03	t
+2020	03	44971	1.47	0.38	1.25	1.35	10.00	9707.03	t
+2020	03	44974	\N	\N	\N	\N	9.00	\N	f
+2020	04	44957	\N	\N	\N	\N	13.00	\N	f
+2020	04	44958	\N	\N	\N	\N	13.00	\N	f
+2020	04	44967	1.55	0.00	0.82	1.35	10.00	9788.95	t
+2020	04	44969	1.69	0.67	1.20	1.35	10.00	9788.95	t
+2020	04	44970	1.60	0.18	1.25	1.35	10.00	9788.95	t
+2020	04	44971	1.47	0.38	1.25	1.35	10.00	9788.95	t
+2020	04	44974	\N	\N	\N	\N	9.00	\N	f
+2020	05	44957	\N	\N	\N	\N	13.00	\N	f
+2020	05	44958	\N	\N	\N	\N	13.00	\N	f
+2020	05	44967	1.55	0.00	0.82	1.35	10.00	9788.95	t
+2020	05	44969	1.69	0.67	1.20	1.35	10.00	9788.95	t
+2020	05	44970	1.60	0.18	1.25	1.35	10.00	9788.95	t
+2020	05	44971	1.47	0.38	1.25	1.35	10.00	9788.95	t
+2020	05	44974	\N	\N	\N	\N	9.00	\N	f
+2020	06	44957	\N	\N	\N	\N	13.00	\N	f
+2020	06	44958	\N	\N	\N	\N	13.00	\N	f
+2020	06	44967	1.55	0.00	0.82	1.35	10.00	9788.95	t
+2020	06	44969	1.69	0.67	1.20	1.35	10.00	9788.95	t
+2020	06	44970	1.60	0.18	1.25	1.35	10.00	9788.95	t
+2020	06	44971	1.47	0.38	1.25	1.35	10.00	9788.95	t
+2020	06	44974	\N	\N	\N	\N	9.00	\N	f
+2020	07	44957	\N	\N	\N	\N	13.00	\N	f
+2020	07	44958	\N	\N	\N	\N	13.00	\N	f
+2020	07	44967	1.55	0.00	0.82	1.35	10.00	9792.61	t
+2020	07	44969	1.69	0.67	1.20	1.35	10.00	9792.61	t
+2020	07	44970	1.60	0.18	1.25	1.35	10.00	9792.61	t
+2020	07	44971	1.47	0.38	1.25	1.35	10.00	9792.61	t
+2020	07	44974	\N	\N	\N	\N	9.00	\N	f
+2020	08	44957	\N	\N	\N	\N	13.00	\N	f
+2020	08	44958	\N	\N	\N	\N	13.00	\N	f
+2020	08	44967	1.55	0.00	0.82	1.35	10.00	9792.61	t
+2020	08	44969	1.69	0.67	1.20	1.35	10.00	9792.61	t
+2020	08	44970	1.60	0.18	1.25	1.35	10.00	9792.61	t
+2020	08	44971	1.47	0.38	1.25	1.35	10.00	9792.61	t
+2020	08	44974	\N	\N	\N	\N	9.00	\N	f
+2020	09	44957	\N	\N	\N	\N	13.00	\N	f
+2020	09	44958	\N	\N	\N	\N	13.00	\N	f
+2020	09	44967	1.55	0.00	0.82	1.35	10.00	9792.61	t
+2020	09	44969	1.69	0.67	1.20	1.35	10.00	9792.61	t
+2020	09	44970	1.60	0.18	1.25	1.35	10.00	9792.61	t
+2020	09	44971	1.47	0.38	1.25	1.35	10.00	9792.61	t
+2020	09	44974	\N	\N	\N	\N	9.00	\N	f
+2020	10	44957	\N	\N	\N	\N	13.00	\N	f
+2020	10	44958	\N	\N	\N	\N	13.00	\N	f
+2020	10	44967	1.55	0.00	0.82	1.35	10.00	9840.89	t
+2020	10	44969	1.69	0.67	1.20	1.35	10.00	9840.89	t
+2020	10	44970	1.60	0.18	1.25	1.35	10.00	9840.89	t
+2020	10	44971	1.47	0.38	1.25	1.35	10.00	9840.89	t
+2020	10	44974	\N	\N	\N	\N	9.00	\N	f
+2020	11	44957	\N	\N	\N	\N	13.00	\N	f
+2020	11	44958	\N	\N	\N	\N	13.00	\N	f
+2020	11	44967	1.55	0.00	0.82	1.35	10.00	9840.89	t
+2020	11	44969	1.69	0.67	1.20	1.35	10.00	9840.89	t
+2020	11	44970	1.60	0.18	1.25	1.35	10.00	9840.89	t
+2020	11	44971	1.47	0.38	1.25	1.35	10.00	9840.89	t
+2020	11	44974	\N	\N	\N	\N	9.00	\N	f
+2020	12	44957	\N	\N	\N	\N	13.00	\N	f
+2020	12	44958	\N	\N	\N	\N	13.00	\N	f
+2020	12	44967	1.55	0.00	0.82	1.35	10.00	9840.89	t
+2020	12	44969	1.69	0.67	1.20	1.35	10.00	9840.89	t
+2020	12	44970	1.60	0.18	1.25	1.35	10.00	9840.89	t
+2020	12	44971	1.47	0.38	1.25	1.35	10.00	9840.89	t
+2020	12	44974	\N	\N	\N	\N	9.00	\N	f
+2021	01	44957	\N	\N	\N	\N	13.00	\N	f
+2021	01	44958	\N	\N	\N	\N	13.00	\N	f
+2021	01	44967	1.55	0.00	0.82	1.74	10.00	9898.68	t
+2021	01	44969	1.69	0.67	1.20	1.74	10.00	9898.68	t
+2021	01	44970	1.60	0.18	1.25	1.74	10.00	9898.68	t
+2021	01	44971	1.47	0.38	1.25	1.74	10.00	9898.68	t
+2021	01	44974	\N	\N	\N	\N	9.00	\N	f
+2021	02	44957	\N	\N	\N	\N	13.00	\N	f
+2021	02	44958	\N	\N	\N	\N	13.00	\N	f
+2021	02	44967	1.55	0.00	0.82	1.74	10.00	9898.68	t
+2021	02	44969	1.69	0.28	1.20	1.74	10.00	9898.68	t
+2021	02	44970	1.60	0.18	1.25	1.74	10.00	9898.68	t
+2021	02	44971	1.47	0.23	1.25	1.74	10.00	9898.68	t
+2021	02	44974	\N	\N	\N	\N	9.00	\N	f
+2021	03	44957	\N	\N	\N	\N	13.00	\N	f
+2021	03	44958	\N	\N	\N	\N	13.00	\N	f
+2021	03	44967	1.55	0.00	0.82	1.74	10.00	9898.68	t
+2021	03	44969	1.69	0.28	1.20	1.74	10.00	9898.68	t
+2021	03	44970	1.60	0.18	1.25	1.74	10.00	9898.68	t
+2021	03	44971	1.47	0.23	1.25	1.74	10.00	9898.68	t
+2021	03	44974	\N	\N	\N	\N	9.00	\N	f
+2021	04	44957	\N	\N	\N	\N	13.00	\N	f
+2021	04	44958	\N	\N	\N	\N	13.00	\N	f
+2021	04	44967	1.55	0.00	0.82	1.74	10.00	10043.52	t
+2021	04	44969	1.69	0.28	1.20	1.74	10.00	10043.52	t
+2021	04	44970	1.60	0.18	1.25	1.74	10.00	10043.52	t
+2021	04	44971	1.47	0.23	1.25	1.74	10.00	10043.52	t
+2021	04	44974	\N	\N	\N	\N	9.00	\N	f
+2021	05	44957	\N	\N	\N	\N	13.00	\N	f
+2021	05	44958	\N	\N	\N	\N	13.00	\N	f
+2021	05	44967	1.55	0.00	0.82	1.74	10.00	10043.52	t
+2021	05	44969	1.69	0.28	1.20	1.74	10.00	10043.52	t
+2021	05	44970	1.60	0.18	1.25	1.74	10.00	10043.52	t
+2021	05	44971	1.47	0.23	1.25	1.74	10.00	10043.52	t
+2021	05	44974	\N	\N	\N	\N	9.00	\N	f
+2021	06	44957	\N	\N	\N	\N	13.00	\N	f
+2021	06	44958	\N	\N	\N	\N	13.00	\N	f
+2021	06	44967	1.55	0.00	0.79	1.74	10.00	10043.52	t
+2021	06	44969	1.69	0.28	1.20	1.74	10.00	10043.52	t
+2021	06	44970	1.60	0.18	1.25	1.74	10.00	10043.52	t
+2021	06	44971	1.47	0.23	1.25	1.74	10.00	10043.52	t
+2021	06	44974	\N	\N	\N	\N	9.00	\N	f
+2021	07	44957	\N	\N	\N	\N	13.00	\N	f
+2021	07	44958	\N	\N	\N	\N	13.00	\N	f
+2021	07	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	07	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	07	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	07	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	07	44974	\N	\N	\N	\N	9.00	\N	f
+2021	08	44957	\N	\N	\N	\N	13.00	\N	f
+2021	08	44958	\N	\N	\N	\N	13.00	\N	f
+2021	08	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	08	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	08	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	08	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	08	44974	\N	\N	\N	\N	9.00	\N	f
+2021	09	44957	\N	\N	\N	\N	13.00	\N	f
+2021	09	44958	\N	\N	\N	\N	13.00	\N	f
+2021	09	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	09	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	09	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	09	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	09	44974	\N	\N	\N	\N	9.00	\N	f
+2021	10	44957	\N	\N	\N	\N	13.00	\N	f
+2021	10	44958	\N	\N	\N	\N	13.00	\N	f
+2021	10	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	10	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	10	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	10	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	10	44974	\N	\N	\N	\N	9.00	\N	f
+2021	11	44957	\N	\N	\N	\N	13.00	\N	f
+2021	11	44958	\N	\N	\N	\N	13.00	\N	f
+2021	11	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	11	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	11	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	11	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	11	44974	\N	\N	\N	\N	9.00	\N	f
+2021	12	44957	\N	\N	\N	\N	13.00	\N	f
+2021	12	44958	\N	\N	\N	\N	13.00	\N	f
+2021	12	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2021	12	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2021	12	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2021	12	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2021	12	44974	\N	\N	\N	\N	9.00	\N	f
+2022	01	44957	\N	\N	\N	\N	13.00	\N	f
+2022	01	44958	\N	\N	\N	\N	13.00	\N	f
+2022	01	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	01	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	01	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	01	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	01	44974	\N	\N	\N	\N	9.00	\N	f
+2022	02	44957	\N	\N	\N	\N	13.00	\N	f
+2022	02	44958	\N	\N	\N	\N	13.00	\N	f
+2022	02	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	02	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	02	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	02	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	02	44974	\N	\N	\N	\N	9.00	\N	f
+2022	03	44957	\N	\N	\N	\N	13.00	\N	f
+2022	03	44958	\N	\N	\N	\N	13.00	\N	f
+2022	03	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	03	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	03	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	03	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	03	44974	\N	\N	\N	\N	9.00	\N	f
+2022	04	44957	\N	\N	\N	\N	13.00	\N	f
+2022	04	44958	\N	\N	\N	\N	13.00	\N	f
+2022	04	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	04	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	04	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	04	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	04	44974	\N	\N	\N	\N	9.00	\N	f
+2022	05	44957	\N	\N	\N	\N	13.00	\N	f
+2022	05	44958	\N	\N	\N	\N	13.00	\N	f
+2022	05	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	05	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	05	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	05	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	05	44974	\N	\N	\N	\N	9.00	\N	f
+2022	06	44957	\N	\N	\N	\N	13.00	\N	f
+2022	06	44958	\N	\N	\N	\N	13.00	\N	f
+2022	06	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	06	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	06	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	06	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	06	44974	\N	\N	\N	\N	9.00	\N	f
+2022	07	44957	\N	\N	\N	\N	13.00	\N	f
+2022	07	44958	\N	\N	\N	\N	13.00	\N	f
+2022	07	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	07	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	07	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	07	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	07	44974	\N	\N	\N	\N	9.00	\N	f
+2022	08	44957	\N	\N	\N	\N	13.00	\N	f
+2022	08	44958	\N	\N	\N	\N	13.00	\N	f
+2022	08	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	08	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	08	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	08	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	08	44974	\N	\N	\N	\N	9.00	\N	f
+2022	09	44957	\N	\N	\N	\N	13.00	\N	f
+2022	09	44958	\N	\N	\N	\N	13.00	\N	f
+2022	09	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	09	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	09	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	09	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	09	44974	\N	\N	\N	\N	9.00	\N	f
+2022	10	44957	\N	\N	\N	\N	13.00	\N	f
+2022	10	44958	\N	\N	\N	\N	13.00	\N	f
+2022	10	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	10	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	10	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	10	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	10	44974	\N	\N	\N	\N	9.00	\N	f
+2022	11	44957	\N	\N	\N	\N	13.00	\N	f
+2022	11	44958	\N	\N	\N	\N	13.00	\N	f
+2022	11	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	11	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	11	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	11	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	11	44974	\N	\N	\N	\N	9.00	\N	f
+2022	12	44957	\N	\N	\N	\N	13.00	\N	f
+2022	12	44958	\N	\N	\N	\N	13.00	\N	f
+2022	12	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2022	12	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2022	12	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2022	12	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2022	12	44974	\N	\N	\N	\N	9.00	\N	f
+2023	01	44957	\N	\N	\N	\N	13.00	\N	f
+2023	01	44958	\N	\N	\N	\N	13.00	\N	f
+2023	01	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	01	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	01	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	01	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	01	44974	\N	\N	\N	\N	9.00	\N	f
+2023	02	44957	\N	\N	\N	\N	13.00	\N	f
+2023	02	44958	\N	\N	\N	\N	13.00	\N	f
+2023	02	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	02	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	02	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	02	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	02	44974	\N	\N	\N	\N	9.00	\N	f
+2023	03	44957	\N	\N	\N	\N	13.00	\N	f
+2023	03	44958	\N	\N	\N	\N	13.00	\N	f
+2023	03	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	03	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	03	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	03	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	03	44974	\N	\N	\N	\N	9.00	\N	f
+2023	04	44957	\N	\N	\N	\N	13.00	\N	f
+2023	04	44958	\N	\N	\N	\N	13.00	\N	f
+2023	04	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	04	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	04	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	04	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	04	44974	\N	\N	\N	\N	9.00	\N	f
+2023	05	44957	\N	\N	\N	\N	13.00	\N	f
+2023	05	44958	\N	\N	\N	\N	13.00	\N	f
+2023	05	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	05	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	05	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	05	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	05	44974	\N	\N	\N	\N	9.00	\N	f
+2023	06	44957	\N	\N	\N	\N	13.00	\N	f
+2023	06	44958	\N	\N	\N	\N	13.00	\N	f
+2023	06	44967	1.55	0.00	0.79	1.74	10.00	10111.55	t
+2023	06	44969	1.69	0.28	1.20	1.74	10.00	10111.55	t
+2023	06	44970	1.60	0.18	1.25	1.74	10.00	10111.55	t
+2023	06	44971	1.47	0.23	1.25	1.74	10.00	10111.55	t
+2023	06	44974	\N	\N	\N	\N	9.00	\N	f
+2023	07	44974	\N	\N	\N	\N	9.00	\N	f
+2023	07	44957	\N	\N	\N	\N	13.00	\N	f
+2023	07	44958	\N	\N	\N	\N	13.00	\N	f
+2023	07	44967	1.55	0.00	0.78	1.84	10.00	11713.96	t
+2023	07	44969	1.69	0.00	1.20	1.84	10.00	11713.96	t
+2023	07	44970	1.60	0.00	1.25	1.84	10.00	11713.96	t
+2023	07	44971	1.47	0.00	1.25	1.84	10.00	11713.96	t
+2023	08	44974	\N	\N	\N	\N	9.00	\N	f
+2023	08	44957	\N	\N	\N	\N	13.00	\N	f
+2023	08	44958	\N	\N	\N	\N	13.00	\N	f
+2023	08	44967	1.55	0.00	0.78	1.84	10.00	11713.96	t
+2023	08	44969	1.69	0.00	1.20	1.84	10.00	11713.96	t
+2023	08	44970	1.60	0.00	1.25	1.84	10.00	11713.96	t
+2023	08	44971	1.47	0.00	1.25	1.84	10.00	11713.96	t
+2023	09	44974	\N	\N	\N	\N	9.00	\N	f
+2023	09	44957	\N	\N	\N	\N	13.00	\N	f
+2023	09	44958	\N	\N	\N	\N	13.00	\N	f
+2023	09	44967	1.55	0.00	0.78	1.84	10.00	11713.96	t
+2023	09	44969	1.69	0.00	1.20	1.84	10.00	11713.96	t
+2023	09	44970	1.60	0.00	1.25	1.84	10.00	11713.96	t
+2023	09	44971	1.47	0.00	1.25	1.84	10.00	11713.96	t
+2023	10	44974	\N	\N	\N	\N	9.00	\N	f
+2023	10	44957	\N	\N	\N	\N	13.00	\N	f
+2023	10	44958	\N	\N	\N	\N	13.00	\N	f
+2023	10	44967	1.55	0.00	0.78	1.84	10.00	11805.62	t
+2023	10	44969	1.69	0.00	1.20	1.84	10.00	11805.62	t
+2023	10	44970	1.60	0.00	1.25	1.84	10.00	11805.62	t
+2023	10	44971	1.47	0.00	1.25	1.84	10.00	11805.62	t
+2023	11	44974	\N	\N	\N	\N	9.00	\N	f
+2023	11	44957	\N	\N	\N	\N	13.00	\N	f
+2023	11	44958	\N	\N	\N	\N	13.00	\N	f
+2023	11	44967	1.55	0.00	0.78	1.84	10.00	11805.62	t
+2023	11	44969	1.69	0.00	1.20	1.84	10.00	11805.62	t
+2023	11	44970	1.60	0.00	1.25	1.84	10.00	11805.62	t
+2023	11	44971	1.47	0.00	1.25	1.84	10.00	11805.62	t
+2023	12	44974	\N	\N	\N	\N	9.00	\N	f
+2023	12	44957	\N	\N	\N	\N	13.00	\N	f
+2023	12	44958	\N	\N	\N	\N	13.00	\N	f
+2023	12	44967	1.55	0.00	0.78	1.84	10.00	11805.62	t
+2023	12	44969	1.69	0.00	1.20	1.84	10.00	11805.62	t
+2023	12	44970	1.60	0.00	1.25	1.84	10.00	11805.62	t
+2023	12	44971	1.47	0.00	1.25	1.84	10.00	11805.62	t
+2024	01	44974	\N	\N	\N	\N	9.00	\N	f
+2024	01	44957	\N	\N	\N	\N	13.00	\N	f
+2024	01	44958	\N	\N	\N	\N	13.00	\N	f
+2024	01	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	01	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	01	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	01	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	02	44974	\N	\N	\N	\N	9.00	\N	f
+2024	02	44957	\N	\N	\N	\N	13.00	\N	f
+2024	02	44958	\N	\N	\N	\N	13.00	\N	f
+2024	02	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	02	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	02	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	02	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	03	44974	\N	\N	\N	\N	9.00	\N	f
+2024	03	44957	\N	\N	\N	\N	13.00	\N	f
+2024	03	44958	\N	\N	\N	\N	13.00	\N	f
+2024	03	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	03	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	03	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	03	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	04	44974	\N	\N	\N	\N	9.00	\N	f
+2024	04	44957	\N	\N	\N	\N	13.00	\N	f
+2024	04	44958	\N	\N	\N	\N	13.00	\N	f
+2024	04	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	04	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	04	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	04	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	05	44974	\N	\N	\N	\N	9.00	\N	f
+2024	05	44957	\N	\N	\N	\N	13.00	\N	f
+2024	05	44958	\N	\N	\N	\N	13.00	\N	f
+2024	05	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	05	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	05	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	05	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	06	44974	\N	\N	\N	\N	9.00	\N	f
+2024	06	44957	\N	\N	\N	\N	13.00	\N	f
+2024	06	44958	\N	\N	\N	\N	13.00	\N	f
+2024	06	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	06	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	06	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	06	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	07	44974	\N	\N	\N	\N	9.00	\N	f
+2024	07	44957	\N	\N	\N	\N	13.00	\N	f
+2024	07	44958	\N	\N	\N	\N	13.00	\N	f
+2024	07	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	07	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	07	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	07	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	08	44974	\N	\N	\N	\N	9.00	\N	f
+2024	08	44957	\N	\N	\N	\N	13.00	\N	f
+2024	08	44958	\N	\N	\N	\N	13.00	\N	f
+2024	08	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	08	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	08	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	08	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	09	44974	\N	\N	\N	\N	9.00	\N	f
+2024	09	44957	\N	\N	\N	\N	13.00	\N	f
+2024	09	44958	\N	\N	\N	\N	13.00	\N	f
+2024	09	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	09	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	09	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	09	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	10	44974	\N	\N	\N	\N	9.00	\N	f
+2024	10	44957	\N	\N	\N	\N	13.00	\N	f
+2024	10	44958	\N	\N	\N	\N	13.00	\N	f
+2024	10	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	10	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	10	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	10	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	11	44974	\N	\N	\N	\N	9.00	\N	f
+2024	11	44957	\N	\N	\N	\N	13.00	\N	f
+2024	11	44958	\N	\N	\N	\N	13.00	\N	f
+2024	11	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	11	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	11	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	11	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2024	12	44974	\N	\N	\N	\N	9.00	\N	f
+2024	12	44957	\N	\N	\N	\N	13.00	\N	f
+2024	12	44958	\N	\N	\N	\N	13.00	\N	f
+2024	12	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2024	12	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2024	12	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2024	12	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+2025	01	44974	\N	\N	\N	\N	9.00	\N	f
+2025	01	44957	\N	\N	\N	\N	13.00	\N	f
+2025	01	44958	\N	\N	\N	\N	13.00	\N	f
+2025	01	44967	1.55	0.00	0.78	1.70	10.00	11796.14	t
+2025	01	44969	1.69	0.00	1.20	1.70	10.00	11796.14	t
+2025	01	44970	1.60	0.00	1.25	1.70	10.00	11796.14	t
+2025	01	44971	1.47	0.00	1.25	1.70	10.00	11796.14	t
+\.
+
+
+--
 -- Data for Name: planilla; Type: TABLE DATA; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
@@ -11295,6 +12289,38 @@ COPY qubytss_rrhh.planilla (id_planilla, id_planilla_plantilla, id_tipo_planilla
 2	\N	1	1	\N	\N	1	2024	02	PL20240201106	\N	\N	\N	\N	\N	\N	\N	2024-02-19 00:22:08.582644	\N
 3	\N	2	3	\N	\N	1	2024	02	PL20240203301	\N	\N	\N	\N	\N	\N	\N	2024-02-19 03:17:23.504114	\N
 4	\N	2	3	\N	\N	1	2024	02	PL20240203304	\N	\N	\N	\N	\N	\N	\N	2024-02-19 03:17:24.953488	\N
+5	\N	1	2	\N	\N	1	2024	04	PL20240401201	\N	fdsfds	\N	\N	\N	\N	\N	2024-02-21 04:33:59.171327	\N
+6	\N	1	2	\N	\N	1	2024	04	PL20240401206	\N	fdsfds	\N	\N	\N	\N	\N	2024-02-21 04:34:00.597348	\N
+\.
+
+
+--
+-- Data for Name: planilla_formula_plantilla; Type: TABLE DATA; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COPY qubytss_rrhh.planilla_formula_plantilla (id_planilla_formula, nomb_form_pla, desc_form_pla, tipo_calculo, calc_form_pla, cod_form_pla, id_concepto_formula, est_form_pla, tipo_desc) FROM stdin;
+14	DESCUENTO X TARDANZAS	DESCUENTO POR TARDANZAS	B	qubytss_rrhh.get_descuento_x_tardanzas	2	268	1	O
+13	DESCUENTO X INASISTENCIAS	DESCUENTO POR INASISTENCIAS	B	qubytss_rrhh.get_descuento_x_inasistencias	1	172	1	O
+2	DESCUENTO JUDICIAL	DESCUENTO JUDICIAL	B	qubytss_rrhh.get_descuento_judicial	99	543	1	N
+15	DESCT. ESSALUD 4.00%	DESCUENTO ESSALUD 4.00%	B	qubytss_rrhh.get_desc_essalud_planilla	13	756	1	O
+1	AGUINALDO	AGUINALDO	B	qubytss_rrhh.get_aguinaldo_planilla	12	566	1	O
+10	APORTE ESSALUD 9.00%	APORTE ESSALUD 9.00%	B	qubytss_rrhh.get_aporte_essalud_planilla	11	124	1	N
+9	LEY 19990	LEY 19990 13.00%	B	qubytss_rrhh.get_aporte_19990	10	528	1	N
+11	LEY 20530	LEY 20530	B	qubytss_rrhh.get_aporte_20530	9	155	1	N
+8	APORTE AFP HABITAT	APORTE AFP HABITAT	B	qubytss_rrhh.get_aporte_afp_habitad	8	626	1	N
+6	APORTE AFP INTEGRA	APORTE AFP INTEGRA	B	qubytss_rrhh.get_aporte_afp_integra	7	335	1	N
+5	APORTE AFP PRIMA	APORTE AFP PRIMA	B	qubytss_rrhh.get_aporte_afp_prima	6	28	1	N
+4	APORTE AFP PROFUTURO	APORTE AFP PROFUTURO	B	qubytss_rrhh.get_aporte_afp_profuturo	5	333	1	N
+12	RETENCIÓN DE 4TA CAT	RETENCIÓN DE 4TA CATEGORÍA	B	qubytss_rrhh.get_ret_4_cat	4	396	1	O
+16	RETENCIÓN DE 5TA CAT	RETENCIÓN DE 5TA CATEGORÍA	B	qubytss_rrhh.get_ret_5_cat	3	156	1	O
+\.
+
+
+--
+-- Data for Name: planilla_plantilla; Type: TABLE DATA; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+COPY qubytss_rrhh.planilla_plantilla (id_planilla_plantilla, id_tipo_planilla, id_tipo_trabajador, id_estado_personal_pla, id_clasificador, est_plantilla, is_valido) FROM stdin;
 \.
 
 
@@ -11330,6 +12356,22 @@ COPY qubytss_rrhh.planilla_trabajador (id_planilla, id_persona, id_corr_trab, id
 3	48	4	\N	\N	3	\N	\N	\N	\N	44978	44971	2600	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 4	48	3	\N	\N	3	\N	\N	\N	\N	44979	44971	2601	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 4	48	4	\N	\N	3	\N	\N	\N	\N	44978	44971	2600	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+5	6	1	\N	\N	2	\N	\N	\N	\N	44975	44969	2603	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+5	48	9	\N	\N	2	\N	\N	\N	\N	44977	44970	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+5	48	8	\N	\N	2	\N	\N	\N	\N	44979	44971	2600	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+5	48	5	\N	\N	2	\N	\N	\N	\N	44979	44972	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+5	48	2	\N	\N	2	\N	\N	\N	\N	44980	44969	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+6	6	1	\N	\N	2	\N	\N	\N	\N	44975	44969	2603	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+6	48	9	\N	\N	2	\N	\N	\N	\N	44977	44970	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+6	48	8	\N	\N	2	\N	\N	\N	\N	44979	44971	2600	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+6	48	5	\N	\N	2	\N	\N	\N	\N	44979	44972	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+6	48	2	\N	\N	2	\N	\N	\N	\N	44980	44969	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	65	1	\N	\N	1	\N	\N	\N	\N	44974	44967	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	6	3	\N	\N	0	\N	\N	\N	\N	44980	44970	2600	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	45	1	\N	\N	1	\N	\N	\N	\N	44974	44973	2602	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	73	1	\N	\N	3	\N	\N	\N	\N	44979	44970	2601	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	6	4	\N	\N	0	\N	\N	\N	\N	44980	44971	2601	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+2	6	5	\N	\N	0	\N	\N	\N	\N	44978	44971	2601	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 \.
 
 
@@ -11349,6 +12391,22 @@ COPY qubytss_rrhh.planilla_trabajador_concepto (id_planilla, id_persona, id_corr
 3	48	4	483	1500.0000	\N	\N	\N	\N	\N
 4	48	3	483	1500.0000	\N	\N	\N	\N	\N
 4	48	4	483	1500.0000	\N	\N	\N	\N	\N
+5	6	1	483	1500.0000	\N	\N	\N	\N	\N
+5	48	9	483	1500.0000	\N	\N	\N	\N	\N
+5	48	8	483	1500.0000	\N	\N	\N	\N	\N
+5	48	5	483	1500.0000	\N	\N	\N	\N	\N
+5	48	2	483	1500.0000	\N	\N	\N	\N	\N
+6	6	1	483	1500.0000	\N	\N	\N	\N	\N
+6	48	9	483	1500.0000	\N	\N	\N	\N	\N
+6	48	8	483	1500.0000	\N	\N	\N	\N	\N
+6	48	5	483	1500.0000	\N	\N	\N	\N	\N
+6	48	2	483	1500.0000	\N	\N	\N	\N	\N
+2	65	1	483	1500.0000	\N	\N	\N	\N	\N
+2	6	3	483	1500.0000	\N	\N	\N	\N	\N
+2	45	1	483	1500.0000	\N	\N	\N	\N	\N
+2	73	1	483	1500.0000	\N	\N	\N	\N	\N
+2	6	4	483	1500.0000	\N	\N	\N	\N	\N
+2	6	5	483	1500.0000	\N	\N	\N	\N	\N
 \.
 
 
@@ -11366,7 +12424,6 @@ COPY qubytss_rrhh.trabajador (id_persona, id_corr_trab, cod_trab, estado_trabaja
 45	1	0A0009	0	1	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	20492	\N	324343	34343434	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44974	323	\N	\N	44973	2602	3243242	\N	\N	\N
 6	1	0A0004	1	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1700	\N	323243232	4324323243232	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44975	32432432432	\N	\N	44969	2603	3242432	\N	\N	\N
 48	1	423432	0	3	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1745	\N	34324	343243342	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44978	3244324	\N	\N	44968	2602	324324	\N	\N	\N
-65	1	32432	0	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1745	\N	32424	32432432	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44974	324324	\N	\N	44967	2602	324324	\N	\N	\N
 73	1	23432	0	3	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1699	\N	3242432	43243243324	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44979	324432	\N	\N	44970	2601	324323243	\N	\N	\N
 48	9	5466	1	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1722	\N	34324	32432434	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44977	4324324	\N	\N	44970	2602	3243243	\N	\N	\N
 48	7	32434	1	1	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1745	\N	34324	34243434	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44978	4324324	\N	\N	44970	2602	3432432	\N	\N	\N
@@ -11376,6 +12433,7 @@ COPY qubytss_rrhh.trabajador (id_persona, id_corr_trab, cod_trab, estado_trabaja
 48	8	23213	1	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1699	\N	34324	4324324	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44979	324324	\N	\N	44971	2600	3243	\N	\N	\N
 48	5	3243	1	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1745	\N	432432432	34343432	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44979	4324324	\N	\N	44972	2602	3243243	\N	\N	\N
 48	2	0A00548	1	2	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1723	\N	324324	3242432	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44980	324324	\N	\N	44969	2602	4324324	\N	\N	\N
+65	1	32432	0	1	0	\N	\N	\N	\N	\N	\N	\N	\N	0	\N	0	1745	\N	32424	32432432	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	44974	324324	\N	\N	44967	2602	324324	\N	\N	\N
 \.
 
 
@@ -11504,6 +12562,30 @@ ALTER TABLE ONLY qubytss_rrhh.concepto
 
 
 --
+-- Name: entidad_comision entidad_comision_pkey; Type: CONSTRAINT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+ALTER TABLE ONLY qubytss_rrhh.entidad_comision
+    ADD CONSTRAINT entidad_comision_pkey PRIMARY KEY (id_anio, id_mes, id_regimen);
+
+
+--
+-- Name: planilla_formula_plantilla planilla_formula_plantilla_pkey; Type: CONSTRAINT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+ALTER TABLE ONLY qubytss_rrhh.planilla_formula_plantilla
+    ADD CONSTRAINT planilla_formula_plantilla_pkey PRIMARY KEY (id_planilla_formula);
+
+
+--
+-- Name: planilla_plantilla planilla_plantilla_pkey; Type: CONSTRAINT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+ALTER TABLE ONLY qubytss_rrhh.planilla_plantilla
+    ADD CONSTRAINT planilla_plantilla_pkey PRIMARY KEY (id_planilla_plantilla);
+
+
+--
 -- Name: planilla_tipo planilla_tipo_pkey; Type: CONSTRAINT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
@@ -11552,10 +12634,24 @@ ALTER TABLE ONLY qubytss_rrhh.trabajador
 
 
 --
+-- Name: cod_form_pla_udx01; Type: INDEX; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE UNIQUE INDEX cod_form_pla_udx01 ON qubytss_rrhh.planilla_formula_plantilla USING btree (cod_form_pla);
+
+
+--
 -- Name: idx_cod_trab; Type: INDEX; Schema: qubytss_rrhh; Owner: qubytss_rrhh
 --
 
 CREATE UNIQUE INDEX idx_cod_trab ON qubytss_rrhh.trabajador USING btree (cod_trab) WHERE (cod_trab IS NOT NULL);
+
+
+--
+-- Name: planilla_plantilla_udx01; Type: INDEX; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+CREATE UNIQUE INDEX planilla_plantilla_udx01 ON qubytss_rrhh.planilla_plantilla USING btree (id_tipo_planilla, id_tipo_trabajador, id_estado_personal_pla, id_clasificador, est_plantilla) WHERE (is_valido = 1);
 
 
 --
@@ -11572,6 +12668,14 @@ ALTER TABLE ONLY qubytss_core.persona
 
 ALTER TABLE ONLY qubytss_rrhh.concepto
     ADD CONSTRAINT concepto_id_sub_tipo_conc_fkey FOREIGN KEY (id_sub_tipo_conc) REFERENCES qubytss_core.list(id_lista);
+
+
+--
+-- Name: entidad_comision entidad_comision_id_regimen_fkey; Type: FK CONSTRAINT; Schema: qubytss_rrhh; Owner: qubytss_rrhh
+--
+
+ALTER TABLE ONLY qubytss_rrhh.entidad_comision
+    ADD CONSTRAINT entidad_comision_id_regimen_fkey FOREIGN KEY (id_regimen) REFERENCES qubytss_core.list(id_lista);
 
 
 --
